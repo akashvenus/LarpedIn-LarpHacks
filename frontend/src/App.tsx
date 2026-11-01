@@ -8,7 +8,7 @@ import { PostComposer } from './components/PostComposer';
 import { SocialDemo } from './components/SocialDemo';
 import { Trophies } from './components/Trophies';
 import { demoReducer, initialState } from './domain/reducer';
-import { badgeUnlocked, derivedXp, micUnlocked, photoList } from './domain/selectors';
+import { badgeUnlocked, derivedXp, micUnlocked, photoList, unlockedItemIds } from './domain/selectors';
 import { ComposerInput, DemoData, PromptId } from './domain/types';
 
 type Screen = 'dorm' | 'events' | 'camera' | 'trophies' | 'composer' | 'gift' | 'social';
@@ -123,6 +123,10 @@ export default function App() {
           roomItems={state.roomItems}
           onSelectAvatar={(itemId) => dispatch({ type: 'SET_AVATAR_ITEM', itemId })}
           onToggleRoomItem={(itemId) => dispatch({ type: 'TOGGLE_ROOM_ITEM', itemId })}
+          unlockedItemIds={unlockedItemIds(state)}
+          placements={state.placements}
+          onPlaceItem={(itemId, spotId) => dispatch({ type: 'PLACE_ITEM', itemId, spotId })}
+          onRemoveItem={(spotId) => dispatch({ type: 'REMOVE_ITEM', spotId })}
         />
       )}
 

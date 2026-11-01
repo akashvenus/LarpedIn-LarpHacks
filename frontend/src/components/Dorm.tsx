@@ -1,6 +1,8 @@
 import { useState } from 'react';
-import { ASSETS, AVATAR_ITEMS, ROOM_ITEMS } from '../assets/manifest';
+import { ASSETS, AVATAR_ITEMS } from '../assets/manifest';
+import { ItemId, SpotId } from '../domain/items';
 import { InventoryPanel } from './InventoryPanel';
+import { DormScene } from './room/DormScene';
 
 export interface DormProps {
   xp: number;
@@ -12,13 +14,16 @@ export interface DormProps {
   roomItems: string[];
   onSelectAvatar: (itemId: string) => void;
   onToggleRoomItem: (itemId: string) => void;
+  unlockedItemIds: ItemId[];
+  placements: Partial<Record<SpotId, ItemId>>;
+  onPlaceItem: (itemId: ItemId, spotId: SpotId) => void;
+  onRemoveItem: (spotId: SpotId) => void;
 }
 
 /**
- * Dorm screen (F1): room backdrop with the avatar in a fixed anchor,
- * a briefcase button (top-right of the room view) that opens the
- * inventory — one panel for avatar looks and static room decor — plus
- * the XP bar, event CTA, and the optional two-bullet stand-up.
+ * Dorm screen (F1): internship XP bar, walkable room with a briefcase button
+ * (top-right) that opens the inventory of avatar looks and toggled decor,
+ * event CTA, and the optional two-bullet stand-up.
  */
 export function Dorm({
   xp,
@@ -30,22 +35,23 @@ export function Dorm({
   roomItems,
   onSelectAvatar,
   onToggleRoomItem,
+  unlockedItemIds,
+  placements,
+  onPlaceItem,
+  onRemoveItem,
 }: DormProps) {
   const [inventoryOpen, setInventoryOpen] = useState(false);
+  const [carryingId, setCarryingId] = useState<ItemId | null>(null);
+  const [isStandUpOpen, setIsStandUpOpen] = useState(false);
   const [standUp, setStandUp] = useState('');
   const bullets = standUp.split('\n').map((line) => line.replace(/^\s*[•*-]\s*/, '').trim()).filter(Boolean);
 
   const avatarEntry = AVATAR_ITEMS.find((item) => item.id === avatarItem);
-  const avatarAsset = avatarEntry?.asset ?? ASSETS.avatar;
-  const avatarScale = avatarEntry?.scale ?? 1;
 
   return (
     <>
-      <header>
+      <header className="dorm-header">
         <h1 className="brand-logo" aria-label="LarpedIn">Larped<span>in</span></h1>
-        <p className="muted" style={{ margin: '0 0 12px' }}>
-          Your internship sim. Photo ops → post → prize.
-        </p>
         <div className="card xp-wrap">
           <div className="xp-row">
             <span>Internship progress</span>
@@ -64,21 +70,17 @@ export function Dorm({
         </div>
       </header>
 
-      <div className="dorm-scene" aria-label="Your dorm room">
-        <img className="dorm-bg" src={ASSETS.dormBackground} alt="" />
-        {ROOM_ITEMS.filter((item) => roomItems.includes(item.id)).map((item) => (
-          <div key={item.id} className={`dorm-slot ${item.slot}`}>
-            <img className="item" src={item.asset} alt={`${item.name}, placed`} />
-          </div>
-        ))}
-        <div className="dorm-slot slot-avatar">
-          <img
-            className="item"
-            src={avatarAsset}
-            style={avatarScale !== 1 ? { transform: `scale(${avatarScale})` } : undefined}
-            alt="You, in the dorm"
-          />
-        </div>
+      <DormScene
+        avatarAsset={avatarEntry?.asset ?? ASSETS.avatar}
+        avatarScale={avatarEntry?.scale ?? 1}
+        lightsPlaced={roomItems.includes('rgb-lights')}
+        unlockedItemIds={unlockedItemIds}
+        placements={placements}
+        onPlaceItem={onPlaceItem}
+        onRemoveItem={onRemoveItem}
+        carryingId={carryingId}
+        onCarryItem={setCarryingId}
+      >
         <button
           className="dorm-inventory-btn"
           onClick={() => setInventoryOpen(true)}
@@ -87,15 +89,23 @@ export function Dorm({
         >
           🧳
         </button>
-      </div>
+      </DormScene>
 
       <div className="dorm-cta-row">
         <button className="btn btn-primary" onClick={onFindEvent}>
           📅 Find an event
         </button>
+        <button
+          className="btn"
+          aria-expanded={isStandUpOpen}
+          aria-controls="dorm-standup"
+          onClick={() => setIsStandUpOpen((open) => !open)}
+        >
+          {standUpSubmitted ? '✅ Stand-up' : '📝 Stand-up +5 XP'}
+        </button>
       </div>
 
-      <section className="card">
+      <section className="card dorm-standup" id="dorm-standup" hidden={!isStandUpOpen}>
         <h3>Daily stand-up · +5 XP (optional)</h3>
         <p className="muted">Share a win from today and what you plan to do next.</p>
         {standUpSubmitted ? (
@@ -142,6 +152,13 @@ export function Dorm({
         roomItems={roomItems}
         onSelectAvatar={onSelectAvatar}
         onToggleRoomItem={onToggleRoomItem}
+        unlockedItemIds={unlockedItemIds}
+        placements={placements}
+        onCarryItem={setCarryingId}
+        onDropItem={(itemId, x, y) => {
+          window.dispatchEvent(new CustomEvent('room-item-drop', { detail: { itemId, x, y } }));
+          setInventoryOpen(false);
+        }}
         onClose={() => setInventoryOpen(false)}
       />
     </>
