@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { ArrowRight } from 'lucide-react';
+import { ArrowRight, X } from 'lucide-react';
 import { AVATAR_ITEMS } from '../assets/manifest';
 import { ItemId, SpotId } from '../domain/items';
 import { AccessoryId, HeldPropId } from '../domain/gear';
@@ -84,20 +84,23 @@ export function Dorm({
 
   return (
     <>
-      {!standUpToday && (
+      {!standUpToday && (standUpSubmitted || (!standUpReady && standUpError)) && (
         <div className="standup-entry">
-          <button type="button" className="standup-shortcut" aria-expanded={isStandUpOpen}
+          {standUpSubmitted && <button type="button" className="standup-shortcut" aria-expanded={isStandUpOpen}
             aria-controls="dorm-standup" disabled={!standUpReady} onClick={() => setIsStandUpOpen((open) => !open)}>
-            <span><strong>What's the update, founder?</strong><small>Your daily Stand-Up{!standUpSubmitted && ' · +5 XP'}</small></span>
+            <span><strong>What's the update, founder?</strong><small>Your daily Stand-Up</small></span>
             <span aria-hidden>{isStandUpOpen ? '−' : '+'}</span>
-          </button>
+          </button>}
           {!standUpReady && standUpError && <button type="button" className="btn" onClick={onRetryStandUps}>Retry loading Stand-Ups</button>}
           {!standUpReady && standUpError && <p className="form-error" role="alert">{standUpError}</p>}
         </div>
       )}
       {!standUpToday && isStandUpOpen && (
         <section ref={standUpPanelRef} className="card dorm-standup" id="dorm-standup">
-          <h3>Your daily Stand-Up</h3>
+          <div className="standup-heading">
+            <h3>Your daily Stand-Up</h3>
+            <button type="button" className="icon-btn" aria-label="Close Stand-Up" onClick={() => setIsStandUpOpen(false)}><X size={18} aria-hidden="true" /></button>
+          </div>
           <p className="muted">A little progress report for your very real board of directors.</p>
           <div className="standup-grid">
             <label>What did you ship, learn, or survive?
@@ -135,12 +138,12 @@ export function Dorm({
         onCarryItem={setCarryingId}
       >
         {journeyStep && !carryingId && !inventoryOpen && (
-          <button type="button" className="journey-banner" onClick={() => {
-            if (journeyStep === 'standup') setIsStandUpOpen(true);
+          <button type="button" className="journey-banner" aria-expanded={journeyStep === 'standup' ? isStandUpOpen : undefined} onClick={() => {
+            if (journeyStep === 'standup') setIsStandUpOpen((open) => !open);
             else onJourneyNavigate(journeyStep);
           }}>
-            <span><small>UP NEXT</small><strong>{
-              journeyStep === 'events' ? 'Find an event' : journeyStep === 'standup' ? 'Post your first Stand-Up' :
+            <span><small>{journeyStep === 'standup' ? 'UP NEXT · STAND-UP +5 XP' : 'UP NEXT'}</small><strong>{
+              journeyStep === 'events' ? 'Find an event' : journeyStep === 'standup' ? "What's the update, founder?" :
               journeyStep === 'camera' ? 'Capture an event photo' : journeyStep === 'social' ? 'Share your post' : 'Create your event post'
             }</strong></span>
             <ArrowRight className="journey-arrow" size={20} aria-hidden="true" />
