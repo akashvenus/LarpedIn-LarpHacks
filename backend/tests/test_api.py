@@ -58,6 +58,32 @@ def test_valid_compose_is_deterministic():
     assert COMPOSER["conclusions"][0]["text"] in first.json()["text"]
 
 
+def test_compose_matches_contract_format():
+    payload = good_payload()
+    text = compose(payload).json()["text"]
+    event = next(item for item in DEMO["events"] if item["id"] == payload["eventId"])
+    hook = next(item for item in COMPOSER["hooks"] if item["id"] == payload["hookId"])
+    conclusion = next(item for item in COMPOSER["conclusions"] if item["id"] == payload["conclusionId"])
+    learnings = [LEARNING_TEXT[item_id] for item_id in payload["learningIds"]]
+    hashtags = [HASHTAG_TEXT[item_id] for item_id in payload["hashtagIds"]]
+    expected = "\n".join(
+        [
+            hook["text"],
+            "",
+            f"I recently attended {event['title']}. Here are three things I learned:",
+            "",
+            f"1. {learnings[0]}",
+            f"2. {learnings[1]}",
+            f"3. {learnings[2]}",
+            "",
+            conclusion["text"],
+            "",
+            " ".join(hashtags),
+        ]
+    )
+    assert text == expected
+
+
 def test_compose_preserves_learning_order():
     forward = good_payload()
     backward = {**forward, "learningIds": list(reversed(forward["learningIds"]))}
