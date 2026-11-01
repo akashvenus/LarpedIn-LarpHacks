@@ -1,5 +1,14 @@
 import { describe, expect, it } from 'vitest';
-import { clearCameraDistance, isWithin, moveVector, moveWithCollisions, worldDirection } from './movement';
+import {
+  clearCameraDistance,
+  dampAngle,
+  dampVelocity,
+  headingOf,
+  isWithin,
+  moveVector,
+  moveWithCollisions,
+  worldDirection,
+} from './movement';
 
 const BOUNDS = { minX: -2, maxX: 2, minZ: -2, maxZ: 2 };
 const BOX = { minX: 0, maxX: 1, minZ: -1, maxZ: 1 };
@@ -75,6 +84,54 @@ describe('moveVector', () => {
 
   it('keeps partial stick input for slow walking', () => {
     expect(moveVector(new Set(), { x: 0, y: 0.4 })).toEqual({ x: 0, y: 0.4 });
+  });
+});
+
+describe('headingOf', () => {
+  it('is 0 when walking toward +z, the way the model faces', () => {
+    expect(headingOf({ x: 0, z: 1 })).toBeCloseTo(0);
+  });
+
+  it('is a quarter turn when walking toward +x', () => {
+    expect(headingOf({ x: 1, z: 0 })).toBeCloseTo(Math.PI / 2);
+  });
+});
+
+describe('dampAngle', () => {
+  it('moves part of the way toward the target', () => {
+    const next = dampAngle(0, 1, 10, 0.016);
+    expect(next).toBeGreaterThan(0);
+    expect(next).toBeLessThan(1);
+  });
+
+  it('settles on the target after a long time', () => {
+    expect(dampAngle(0, 1, 10, 100)).toBeCloseTo(1);
+  });
+
+  it('turns the short way across the wrap point', () => {
+    const start = Math.PI - 0.1;
+    const next = dampAngle(start, -Math.PI + 0.1, 10, 0.016);
+    expect(next).toBeGreaterThan(start);
+  });
+
+  it('does not depend on how a duration is split into frames', () => {
+    const oneStep = dampAngle(0, 1, 10, 0.04);
+    const twoSteps = dampAngle(dampAngle(0, 1, 10, 0.02), 1, 10, 0.02);
+    expect(twoSteps).toBeCloseTo(oneStep);
+  });
+});
+
+describe('dampVelocity', () => {
+  it('eases toward the target rather than jumping', () => {
+    const next = dampVelocity({ x: 0, z: 0 }, { x: 2, z: 0 }, 12, 0.016);
+    expect(next.x).toBeGreaterThan(0);
+    expect(next.x).toBeLessThan(2);
+  });
+
+  it('reaches the target after a long time', () => {
+    const next = dampVelocity({ x: 1, z: 1 }, { x: 0, z: 0 }, 12, 100);
+    expect(next.x).toBeCloseTo(0);
+    expect(next.z).toBeCloseTo(0);
   });
 });
 

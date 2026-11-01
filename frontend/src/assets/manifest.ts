@@ -33,12 +33,20 @@ export const ASSETS: Record<AssetName, string> = {
  * - ROOM_ITEMS: decor toggled from the inventory. Decor placed by hand comes
  *   from the box in the room instead (see domain/items.ts).
  */
+export interface HoodieLook {
+  color: string;
+  label: string;
+}
+
 export interface AvatarItem {
   id: string;
   name: string;
   asset: string;
   /** Visual scale multiplier so variants match in the room. */
   scale?: number;
+  /** Outfit on the walkable 3D character, which cannot use the flat art. */
+  hoodie?: HoodieLook;
+  hasMic?: boolean;
 }
 
 export interface RoomItem {
@@ -51,10 +59,28 @@ export interface RoomItem {
 
 export const AVATAR_ITEMS: AvatarItem[] = [
   { id: 'base', name: 'Default', asset: 'assets/avatar.png', scale: 0.95 },
-  { id: 'hoodie-waterloo', name: 'Waterloo hoodie', asset: 'assets/avatar-hoodie-waterloo.png', scale: 0.90 },
-  { id: 'hoodie-uoft', name: 'UofT hoodie', asset: 'assets/avatar-hoodie-uoft.png', scale: 0.90 },
-  { id: 'hoodie-mit', name: 'MIT hoodie', asset: 'assets/avatar-hoodie-mit.png', scale: 0.90 },
-  { id: 'mic', name: 'DJI mic', asset: 'assets/avatar-mic.png', scale: 0.92 },
+  {
+    id: 'hoodie-waterloo',
+    name: 'Waterloo hoodie',
+    asset: 'assets/avatar-hoodie-waterloo.png',
+    scale: 0.90,
+    hoodie: { color: '#2a282c', label: 'WATERLOO' },
+  },
+  {
+    id: 'hoodie-uoft',
+    name: 'UofT hoodie',
+    asset: 'assets/avatar-hoodie-uoft.png',
+    scale: 0.90,
+    hoodie: { color: '#1f2c5c', label: 'U OF T' },
+  },
+  {
+    id: 'hoodie-mit',
+    name: 'MIT hoodie',
+    asset: 'assets/avatar-hoodie-mit.png',
+    scale: 0.90,
+    hoodie: { color: '#6e2233', label: 'MIT' },
+  },
+  { id: 'mic', name: 'DJI mic', asset: 'assets/avatar-mic.png', scale: 0.92, hasMic: true },
 ];
 
 export const ROOM_ITEMS: RoomItem[] = [
