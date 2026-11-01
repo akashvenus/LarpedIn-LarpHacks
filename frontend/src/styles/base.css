@@ -405,11 +405,13 @@ h2 {
 
 .standup-grid {
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: minmax(0, 1fr);
   gap: 10px;
 }
 
 .standup-grid textarea {
+  width: 100%;
+  min-width: 0;
   min-height: 74px;
   resize: vertical;
   background: var(--bg);

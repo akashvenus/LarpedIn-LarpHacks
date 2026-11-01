@@ -553,3 +553,19 @@
 .post-delete:focus-visible { outline: 2px solid #0a66c2; outline-offset: 2px; }
 .post-delete:disabled { opacity: 0.5; cursor: wait; }
 .post-action-error { margin: 0; padding: 10px 12px; color: #8a1c1c; background: #fff0ef; border: 1px solid #dca6a1; border-radius: 8px; }
+.social-mail { margin-left: auto; }
+.profile-photo-picker { margin: 14px 0 0; padding: 0; border: 0; }
+.profile-photo-picker legend { margin-bottom: 8px; font-size: 13px; font-weight: 600; }
+.profile-photo-options { display: flex; flex-wrap: wrap; gap: 8px; }
+.profile-photo-option { width: 52px; height: 52px; padding: 2px; border: 2px solid transparent; border-radius: 50%; background: transparent; cursor: pointer; }
+.profile-photo-option[aria-pressed="true"] { border-color: #0a66c2; }
+.profile-photo-option:focus-visible { outline: 2px solid #0a66c2; outline-offset: 2px; }
+.profile-photo-option img { width: 100%; height: 100%; border-radius: 50%; object-fit: cover; }
+.onboarding-card { width: min(100%, 360px); max-width: 360px; text-align: left; }
+.onboarding-card p { margin: 0; }
+.onboarding-card .personal-field input { width: 100%; }
+
+.inbox-sending { display: flex; align-items: center; gap: 8px; }
+.inbox-spinner { width: 16px; height: 16px; border: 2px solid #c8d9e9; border-top-color: #0a66c2; border-radius: 50%; animation: inbox-spin 0.8s linear infinite; }
+@keyframes inbox-spin { to { transform: rotate(360deg); } }
+@media (prefers-reduced-motion: reduce) { .inbox-spinner { animation: none; border-color: #0a66c2; } }

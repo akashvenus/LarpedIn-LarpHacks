@@ -101,7 +101,10 @@ class SavedPhotos(BaseModel):
 
 
 class DemoStatePayload(BaseModel):
-    currentScreen: Literal["dorm", "events", "camera", "trophies", "composer", "gift", "social"]
+    name: str = Field(default="", max_length=100)
+    occupation: str = Field(default="", max_length=160)
+    profilePhoto: Literal["room", "selfie", "banner", "handshake"] | None = None
+    currentScreen: Literal["dorm", "events", "camera", "trophies", "composer", "gift", "social", "inbox"]
     eventId: str | None
     completedPrompts: list[Literal["room", "selfie", "banner", "handshake"]]
     photos: SavedPhotos
@@ -117,6 +120,7 @@ class DemoStatePayload(BaseModel):
     standUpBullets: StandUpBullets | None
     giftOpened: bool
     outreachSent: bool
+    outreachPostText: str = ""
     placements: dict[str, str]
 
 

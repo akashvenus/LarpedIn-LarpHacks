@@ -369,3 +369,52 @@ def test_user_post_database_failures_are_reported(monkeypatch):
     client_id = "11111111-1111-4111-8111-111111111111"
     assert client.put(f"/api/user-post/{client_id}", json=good_payload()).status_code == 503
     assert client.delete(f"/api/user-post/{client_id}").status_code == 503
+
+
+def test_ai_preset_calls_gemini_when_configured(monkeypatch):
+    from types import SimpleNamespace
+    from app import gemini
+    selected = {
+        "hookId": COMPOSER["hooks"][0]["id"],
+        "learningIds": [item["id"] for item in COMPOSER["learnings"][:3]],
+        "conclusionId": COMPOSER["conclusions"][0]["id"],
+        "hashtagIds": [COMPOSER["hashtags"][0]["id"]],
+    }
+    calls = []
+    def generate_content(**kwargs):
+        calls.append(kwargs)
+        return SimpleNamespace(text=json.dumps(selected))
+    monkeypatch.setenv("GEMINI_API_KEY", "test-key")
+    monkeypatch.setattr(gemini.genai, "Client", lambda **kwargs: SimpleNamespace(models=SimpleNamespace(generate_content=generate_content)))
+    response = client.post("/api/ai/preset", json={"eventId": DEMO["events"][0]["id"]})
+    assert response.status_code == 200
+    assert response.json() == {"source": "gemini", **selected}
+    assert len(calls) == 1 and calls[0]["model"] == "gemini-3.5-flash-lite"
+
+
+def test_ai_preset_silently_falls_back_when_gemini_fails(monkeypatch):
+    from app import gemini
+    def fail(**kwargs):
+        raise RuntimeError("unavailable")
+    monkeypatch.setenv("GEMINI_API_KEY", "test-key")
+    monkeypatch.setattr(gemini.genai, "Client", fail)
+    response = client.post("/api/ai/preset", json={"eventId": DEMO["events"][0]["id"]})
+    assert response.status_code == 200
+    assert response.json()["source"] == "fallback"
+
+
+def test_saved_progress_profile_fields_are_backward_compatible():
+    from app.models import DemoStatePayload
+    payload = {
+        "currentScreen": "dorm", "eventId": None, "completedPrompts": [],
+        "photos": {"room": None, "selfie": None, "banner": None, "handshake": None},
+        "selections": {"hookId": None, "learningIds": [], "conclusionId": None, "hashtagIds": []},
+        "composerInput": None, "composerDraft": {"answers": {}, "hashtagIds": [], "active": "hook", "customOpen": False, "customDraft": ""},
+        "postText": "", "postPublished": False, "avatarItem": "base", "roomItems": [],
+        "standUpDraft": "", "standUpSubmitted": False, "standUpBullets": None,
+        "giftOpened": False, "outreachSent": False, "placements": {},
+    }
+    legacy = DemoStatePayload.model_validate(payload)
+    assert legacy.name == "" and legacy.occupation == "" and legacy.profilePhoto is None
+    updated = DemoStatePayload.model_validate({**payload, "name": "Sam", "occupation": "Designer", "profilePhoto": "selfie", "currentScreen": "inbox", "outreachPostText": "My post"})
+    assert updated.name == "Sam" and updated.profilePhoto == "selfie" and updated.outreachPostText == "My post"

@@ -89,7 +89,10 @@ export interface PhotoRef {
 }
 
 export interface DemoState {
-  currentScreen: 'dorm' | 'events' | 'camera' | 'trophies' | 'composer' | 'gift' | 'social';
+  currentScreen: 'dorm' | 'events' | 'camera' | 'trophies' | 'composer' | 'gift' | 'social' | 'inbox';
+  name: string;
+  occupation: string;
+  profilePhoto: PromptId | null;
   eventId: string | null;
   completedPrompts: PromptId[];
   /**
@@ -117,6 +120,7 @@ export interface DemoState {
   standUpBullets: { bullet1: string; bullet2: string } | null;
   giftOpened: boolean;
   outreachSent: boolean;
+  outreachPostText: string;
   /** Which item sits in each dorm spot. An item occupies at most one spot. */
   placements: Partial<Record<SpotId, ItemId>>;
 }
@@ -124,6 +128,8 @@ export interface DemoState {
 export type DemoAction =
   | { type: 'RESTORE_STATE'; state: DemoState }
   | { type: 'SET_CURRENT_SCREEN'; screen: DemoState['currentScreen'] }
+  | { type: 'SET_PROFILE'; name: string; occupation: string }
+  | { type: 'SET_PROFILE_PHOTO'; promptId: PromptId }
   | { type: 'SELECT_EVENT'; eventId: string }
   | { type: 'CAPTURE'; dataUrl: string; promptId: PromptId }
   | { type: 'CHECK_PROMPT'; promptId: PromptId }
@@ -147,6 +153,9 @@ export type DemoAction =
 
 export const initialState: DemoState = {
   currentScreen: 'dorm',
+  name: '',
+  occupation: '',
+  profilePhoto: null,
   eventId: null,
   completedPrompts: [],
   photos: { room: null, selfie: null, banner: null, handshake: null },
@@ -164,5 +173,6 @@ export const initialState: DemoState = {
   standUpBullets: null,
   giftOpened: false,
   outreachSent: false,
+  outreachPostText: '',
   placements: {},
 };

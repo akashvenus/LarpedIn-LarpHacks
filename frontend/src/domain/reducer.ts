@@ -21,11 +21,18 @@ import {
 export function demoReducer(state: DemoState, action: DemoAction): DemoState {
   switch (action.type) {
     case 'RESTORE_STATE':
-      return action.state;
+      return { ...initialState, ...action.state };
 
     case 'SET_CURRENT_SCREEN':
       if (state.currentScreen === action.screen) return state;
       return { ...state, currentScreen: action.screen };
+
+    case 'SET_PROFILE':
+      return { ...state, name: action.name.trim(), occupation: action.occupation.trim() };
+
+    case 'SET_PROFILE_PHOTO':
+      if (!state.photos[action.promptId]) return state;
+      return { ...state, profilePhoto: action.promptId };
 
     case 'SELECT_EVENT':
       if (state.eventId === action.eventId) return state;
@@ -174,7 +181,7 @@ export function demoReducer(state: DemoState, action: DemoAction): DemoState {
     case 'GIFT_ANIMATION_DONE':
       // One callback: mark the gift open and send the simulated message.
       if (state.giftOpened) return state;
-      return { ...state, giftOpened: true, outreachSent: true };
+      return { ...state, giftOpened: true, outreachSent: true, outreachPostText: state.postText };
 
     case 'PLACE_ITEM': {
       const item = findItem(action.itemId);

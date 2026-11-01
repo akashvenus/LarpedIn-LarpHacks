@@ -15,11 +15,17 @@ import { Dorm } from './components/Dorm';
 import { Events } from './components/Events';
 import { GiftReveal } from './components/GiftReveal';
 import { PostComposer } from './components/PostComposer';
+import { Onboarding } from './components/Onboarding';
+import { Inbox } from './components/Inbox';
 import { SocialDemo } from './components/SocialDemo';
 import { Trophies } from './components/Trophies';
 import { demoReducer, initialState } from './domain/reducer';
 import { badgeUnlocked, derivedXp, micUnlocked, photoList, unlockedItemIds } from './domain/selectors';
 import { ComposerInput, DemoData, DemoState, PromptId } from './domain/types';
+import { MOCK_DEMO } from './demo/mockDemo';
+import { loadLocalDemo, saveLocalDemo } from './demo/localDemo';
+
+const isLocalDemo = /^\/demo\/?$/.test(window.location.pathname);
 
 type Screen = DemoState['currentScreen'];
 
@@ -48,6 +54,7 @@ export default function App() {
   const [postBusy, setPostBusy] = useState(false);
   const [postError, setPostError] = useState<string | null>(null);
   const [editingPost, setEditingPost] = useState(false);
+  const [sendingRecruiter, setSendingRecruiter] = useState(false);
   const [composerVersion, setComposerVersion] = useState(0);
   const [replacement, setReplacement] = useState<{ text: string; input: ComposerInput } | null>(null);
 
@@ -61,6 +68,10 @@ export default function App() {
 
   useEffect(() => {
     let alive = true;
+    if (isLocalDemo) {
+      setDemo(MOCK_DEMO);
+      return () => { alive = false; };
+    }
     fetchDemo()
       .then(({ data }) => alive && setDemo(data))
       .catch((err: unknown) => alive && setLoadError(err instanceof Error ? err.message : 'Failed to load demo'));
@@ -73,6 +84,19 @@ export default function App() {
     let alive = true;
     setStateLoaded(false);
     setStateError(null);
+    if (isLocalDemo) {
+      try {
+        const saved = loadLocalDemo(window.localStorage);
+        if (saved) {
+          dispatch({ type: 'RESTORE_STATE', state: saved });
+          setScreen(saved.currentScreen);
+        }
+      } catch {
+        // Browsers can block localStorage; the demo still works for this session.
+      }
+      setStateLoaded(true);
+      return () => { alive = false; };
+    }
     try {
       clientId.current = getBrowserClientId();
     } catch (err) {
@@ -95,7 +119,17 @@ export default function App() {
   }, [loadAttempt]);
 
   useEffect(() => {
-    if (!stateLoaded || !clientId.current || postOperation.current) return;
+    if (!stateLoaded || postOperation.current) return;
+    if (isLocalDemo) {
+      try {
+        saveLocalDemo(window.localStorage, state);
+        setSaveError(null);
+      } catch {
+        setSaveError('Browser storage is unavailable or full; progress will last for this session only.');
+      }
+      return;
+    }
+    if (!clientId.current) return;
     const snapshot = state;
     setSaving(true);
     const timer = window.setTimeout(() => {
@@ -113,6 +147,12 @@ export default function App() {
     }, 100);
     return () => window.clearTimeout(timer);
   }, [state, stateLoaded]);
+
+  useEffect(() => {
+    if (!sendingRecruiter) return;
+    const timer = window.setTimeout(() => setSendingRecruiter(false), 1200);
+    return () => window.clearTimeout(timer);
+  }, [sendingRecruiter]);
 
   const selectedEvent = demo?.events.find((e) => e.id === state.eventId) ?? null;
 
@@ -139,6 +179,7 @@ export default function App() {
           <button className="btn btn-primary" onClick={() => setLoadAttempt((attempt) => attempt + 1)}>
             Retry database connection
           </button>
+          <a className="btn" href="/demo">Open local demo</a>
         </div>
       </div>
     );
@@ -153,6 +194,10 @@ export default function App() {
         </div>
       </div>
     );
+  }
+
+  if (!state.name?.trim() || !state.occupation?.trim()) {
+    return <Onboarding onComplete={(name, occupation) => dispatch({ type: 'SET_PROFILE', name, occupation })} />;
   }
 
   const showDock = !['composer', 'gift'].includes(screen);
@@ -173,6 +218,7 @@ export default function App() {
   };
 
   const handleCompose = async (input: ComposerInput) => {
+    if (isLocalDemo) return localCompose(input, demo);
     try {
       return await compose(input);
     } catch (err) {
@@ -187,7 +233,7 @@ export default function App() {
   };
 
   const handlePublish = async (text: string) => {
-    if (postOperation.current || !clientId.current || !text.trim()) return;
+    if (postOperation.current || (!isLocalDemo && !clientId.current) || !text.trim()) return;
     const input = replacement?.input ?? lastComposerInput.current ?? state.composerInput;
     if (!input) { setPostError('Open the composer to prepare your post.'); return; }
     postOperation.current = true;
@@ -195,7 +241,7 @@ export default function App() {
     setPostError(null);
     try {
       await saveQueue.current;
-      const savedText = await saveUserPost(clientId.current, input);
+      const savedText = isLocalDemo ? localCompose(input, demo) : await saveUserPost(clientId.current!, input);
       if (savedText !== text) throw new Error('The saved post did not match the draft.');
       dispatch({ type: 'SET_COMPOSER_INPUT', input });
       dispatch({ type: 'SET_POST_TEXT', text });
@@ -213,13 +259,13 @@ export default function App() {
   };
 
   const handleDelete = async () => {
-    if (postOperation.current || !clientId.current) return;
+    if (postOperation.current || (!isLocalDemo && !clientId.current)) return;
     postOperation.current = true;
     setPostBusy(true);
     setPostError(null);
     try {
       await saveQueue.current;
-      await deleteUserPost(clientId.current);
+      if (!isLocalDemo) await deleteUserPost(clientId.current!);
       lastComposerInput.current = null;
       setReplacement(null);
       setEditingPost(false);
@@ -248,7 +294,7 @@ export default function App() {
     <div className="app">
       {saveError && (
         <div role="alert" className="persistence-error">
-          Progress could not be saved to the database: {saveError}
+          {isLocalDemo ? saveError : `Progress could not be saved to the database: ${saveError}`}
         </div>
       )}
       {!saveError && saving && <div className="persistence-status">Saving progress…</div>}
@@ -320,7 +366,7 @@ export default function App() {
             onDraftChange={handleComposerDraft}
             onCompose={handleCompose}
             onComposed={handleComposed}
-            onAiPreset={fetchAiPreset}
+            onAiPreset={isLocalDemo ? async () => { throw new Error('Local demo'); } : fetchAiPreset}
           />
         </div>
       )}
@@ -328,10 +374,10 @@ export default function App() {
       {screen === 'gift' && (
         <GiftReveal
           onComplete={() => {
-            // One-shot: mark the gift open and trigger the automatic
-            // simulated recruiter message (idempotent reducer action).
+            // Claiming the gift sends the message inside the demo.
             dispatch({ type: 'GIFT_ANIMATION_DONE' });
-            navigate('social');
+            setSendingRecruiter(true);
+            navigate('inbox');
           }}
         />
       )}
@@ -345,22 +391,24 @@ export default function App() {
         />
       )}
 
-      {screen === 'social' && (
+      {(screen === 'social' || screen === 'inbox') && (
         <div className="page-with-header">
           <header className="topbar">
             <button className="icon-btn" onClick={() => navigate('dorm')} aria-label="Back to dorm">
               ←
             </button>
-            <span className="topbar-title">Simulated LinkedIn</span>
+            <span className="topbar-title">{screen === 'inbox' ? 'Inbox' : 'Simulated LinkedIn'}</span>
+            <button type="button" className="icon-btn social-mail" aria-label={screen === 'inbox' ? 'Back to feed' : 'Open inbox'} onClick={() => navigate(screen === 'inbox' ? 'social' : 'inbox')}>
+              {screen === 'inbox' ? '▤' : '✉️'}
+            </button>
           </header>
-          <SocialDemo
-            profile={demo.profile}
-            recruiter={demo.recruiter}
+          {screen === 'inbox' ? <Inbox recruiter={demo.recruiter} message={demo.outreachMessage} postText={state.outreachPostText || state.postText} sent={state.outreachSent} sending={sendingRecruiter} /> : <SocialDemo
+            profile={{ ...demo.profile, name: state.name, headline: state.occupation }}
             postText={editingPost ? replacement?.text ?? '' : state.postText}
             photos={photoList(state)}
-            outreachMessage={demo.outreachMessage}
-            outreachSent={state.outreachSent}
             published={state.postPublished && !editingPost}
+            profilePhoto={state.profilePhoto}
+            onSelectPhoto={(promptId) => dispatch({ type: 'SET_PROFILE_PHOTO', promptId })}
             onPublish={(text) => void handlePublish(text)}
             onEdit={selectedEvent ? () => navigate('composer') : undefined}
             onReplace={selectedEvent && state.postPublished ? () => { setEditingPost(true); setReplacement(null); navigate('composer'); } : undefined}
@@ -369,7 +417,7 @@ export default function App() {
             error={postError}
             replacing={editingPost}
             onCancelReplace={() => { setEditingPost(false); setReplacement(null); }}
-          />
+          />}
         </div>
       )}
 
