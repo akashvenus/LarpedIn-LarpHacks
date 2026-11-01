@@ -135,6 +135,7 @@ export function demoReducer(state: DemoState, action: DemoAction): DemoState {
       return {
         ...state,
         eventId: action.input.eventId,
+        composerInput: action.input,
         selections: {
           hookId: action.input.hookId,
           learningIds: [...action.input.learningIds],
@@ -143,16 +144,9 @@ export function demoReducer(state: DemoState, action: DemoAction): DemoState {
         },
       };
 
-    case 'SET_COMPOSER_SELECTIONS':
-      if (
-        state.selections.hookId === action.selections.hookId &&
-        state.selections.conclusionId === action.selections.conclusionId &&
-        sameIds(state.selections.learningIds, action.selections.learningIds) &&
-        sameIds(state.selections.hashtagIds, action.selections.hashtagIds)
-      ) {
-        return state;
-      }
-      return { ...state, selections: action.selections };
+    case 'SET_COMPOSER_DRAFT':
+      if (JSON.stringify(state.composerDraft) === JSON.stringify(action.draft)) return state;
+      return { ...state, composerDraft: action.draft };
 
     case 'SET_POST_TEXT':
       if (state.postText === action.text) return state;

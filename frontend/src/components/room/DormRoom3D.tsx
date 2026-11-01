@@ -1,70 +1,88 @@
 import { useTexture } from '@react-three/drei';
-import { Canvas } from '@react-three/fiber';
-import { useState } from 'react';
-import { ASSETS, AVATAR_ITEMS } from '../../assets/manifest';
+import { Canvas, useThree } from '@react-three/fiber';
+import { CSSProperties, MouseEvent, useEffect, useState } from 'react';
+import { Raycaster, Vector2 } from 'three';
+import { ASSETS, AvatarItem } from '../../assets/manifest';
 import { findItem, ItemId, SpotId } from '../../domain/items';
+import { findDropTarget } from './dropTarget';
 import { ItemBoxPanel } from './ItemBoxPanel';
 import { Joystick } from './Joystick';
 import { PlacedItems } from './PlacedItems';
 import { Player } from './Player';
 import { RgbLights, RoomShell } from './RoomShell';
+import { useHoldAction } from './useHoldAction';
 import { useDragYaw, useMoveInput } from './useRoomControls';
 
-// Switching looks in the inventory must not suspend the canvas and flash the fallback.
-AVATAR_ITEMS.forEach((item) => useTexture.preload(item.asset));
+const BOX_HOLD_MS = 700;
 
 export interface DormRoom3DProps {
-  avatarAsset: string;
-  avatarScale: number;
+  avatar: AvatarItem;
   lightsPlaced: boolean;
   unlockedItemIds: ItemId[];
   placements: Partial<Record<SpotId, ItemId>>;
   onPlaceItem: (itemId: ItemId, spotId: SpotId) => void;
   onRemoveItem: (spotId: SpotId) => void;
+  carryingId: ItemId | null;
+  onCarryItem: (itemId: ItemId | null) => void;
 }
 
 /** Walkable dorm: the 3D scene plus its on-screen controls. */
 export default function DormRoom3D({
-  avatarAsset,
-  avatarScale,
+  avatar,
   lightsPlaced,
   unlockedItemIds,
   placements,
   onPlaceItem,
   onRemoveItem,
+  carryingId,
+  onCarryItem,
 }: DormRoom3DProps) {
   const [isNearBox, setIsNearBox] = useState(false);
   const [isBoxOpen, setIsBoxOpen] = useState(false);
-  const [carryingId, setCarryingId] = useState<ItemId | null>(null);
   const { yawRef, onPointerDown } = useDragYaw(0);
 
-  const { readInput, setStick } = useMoveInput((code) => {
-    if (code === 'KeyE' && isNearBox) setIsBoxOpen((open) => !open);
-    if (code === 'Escape') {
-      setIsBoxOpen(false);
-      setCarryingId(null);
-    }
+  const carried = carryingId ? findItem(carryingId) : undefined;
+  const canOpenBox = isNearBox && !isBoxOpen && !carried;
+  const { isHolding, startHold, endHold } = useHoldAction(BOX_HOLD_MS, canOpenBox, () => setIsBoxOpen(true));
+
+  const { readInput, setStick } = useMoveInput({
+    onPress: (code) => {
+      if (code === 'KeyE') {
+        if (isBoxOpen) setIsBoxOpen(false);
+        else if (canOpenBox) startHold();
+      }
+      if (code === 'Escape') {
+        setIsBoxOpen(false);
+        onCarryItem(null);
+      }
+    },
+    onRelease: (code) => {
+      if (code === 'KeyE') endHold();
+    },
   });
 
-  const carried = carryingId ? findItem(carryingId) : undefined;
+  // detail is 0 only for keyboard activation, which has no way to hold a pointer.
+  const handleBoxButtonClick = (event: MouseEvent) => {
+    if (event.detail === 0) setIsBoxOpen(true);
+  };
 
   const handlePick = (itemId: ItemId) => {
     const item = findItem(itemId);
     // Decoded ahead of the tap, so the item appears the moment it is placed.
     if (item) useTexture.preload(ASSETS[item.asset]);
-    setCarryingId(itemId);
+    onCarryItem(itemId);
     setIsBoxOpen(false);
   };
 
   const handlePlace = (spotId: SpotId) => {
     if (carryingId) onPlaceItem(carryingId, spotId);
-    setCarryingId(null);
+    onCarryItem(null);
   };
 
   const handlePickUp = (spotId: SpotId, itemId: ItemId) => {
     if (carryingId) return;
     onRemoveItem(spotId);
-    setCarryingId(itemId);
+    onCarryItem(itemId);
   };
 
   return (
@@ -79,6 +97,7 @@ export default function DormRoom3D({
           <ambientLight intensity={lightsPlaced ? 1.1 : 1.6} />
           <directionalLight position={[-1, 2.4, 1]} intensity={1.4} />
           <RoomShell />
+          <DropHandler onPlaceItem={onPlaceItem} onCarryItem={onCarryItem} />
           {lightsPlaced && <RgbLights />}
           <PlacedItems
             placements={placements}
@@ -87,8 +106,7 @@ export default function DormRoom3D({
             onPickUp={handlePickUp}
           />
           <Player
-            avatarAsset={avatarAsset}
-            avatarScale={avatarScale}
+            avatar={avatar}
             isFrozen={isBoxOpen}
             readInput={readInput}
             yawRef={yawRef}
@@ -103,7 +121,7 @@ export default function DormRoom3D({
             Walk to a glowing spot on the {carried.surface === 'wall' ? 'wall' : 'desk'} and tap it to place your{' '}
             {carried.name.toLowerCase()}
           </span>
-          <button className="room-banner-cancel" onClick={() => setCarryingId(null)}>
+          <button className="room-banner-cancel" onClick={() => onCarryItem(null)}>
             Cancel
           </button>
         </div>
@@ -111,9 +129,21 @@ export default function DormRoom3D({
 
       {!isBoxOpen && <Joystick onChange={setStick} />}
 
-      {isNearBox && !isBoxOpen && !carried && (
-        <button className="btn btn-primary room-action" onClick={() => setIsBoxOpen(true)}>
-          📦 Open box
+      {canOpenBox && (
+        <button
+          className={`btn btn-primary room-action${isHolding ? ' is-holding' : ''}`}
+          style={{ '--hold-ms': `${BOX_HOLD_MS}ms` } as CSSProperties}
+          onPointerDown={startHold}
+          onPointerUp={endHold}
+          onPointerLeave={endHold}
+          onPointerCancel={endHold}
+          onContextMenu={(event) => event.preventDefault()}
+          onClick={handleBoxButtonClick}
+        >
+          <span className="room-action-fill" aria-hidden="true" />
+          <span className="room-action-label">
+            <kbd className="room-action-key">E</kbd> Hold to open box
+          </span>
         </button>
       )}
 
@@ -127,4 +157,26 @@ export default function DormRoom3D({
       )}
     </div>
   );
+}
+
+function DropHandler({ onPlaceItem, onCarryItem }: Pick<DormRoom3DProps, 'onPlaceItem' | 'onCarryItem'>) {
+  const { camera, gl } = useThree();
+  useEffect(() => {
+    const handleDrop = (raw: Event) => {
+      const { itemId, x, y } = (raw as CustomEvent<{ itemId: ItemId; x: number; y: number }>).detail;
+      const item = findItem(itemId);
+      const rect = gl.domElement.getBoundingClientRect();
+      if (!item || x < rect.left || x > rect.right || y < rect.top || y > rect.bottom) return;
+      const raycaster = new Raycaster();
+      raycaster.setFromCamera(new Vector2((x - rect.left) / rect.width * 2 - 1, -(y - rect.top) / rect.height * 2 + 1), camera);
+      const spotId = findDropTarget(item, raycaster);
+      if (spotId) {
+        onPlaceItem(itemId, spotId);
+        onCarryItem(null);
+      }
+    };
+    window.addEventListener('room-item-drop', handleDrop);
+    return () => window.removeEventListener('room-item-drop', handleDrop);
+  }, [camera, gl, onPlaceItem, onCarryItem]);
+  return null;
 }

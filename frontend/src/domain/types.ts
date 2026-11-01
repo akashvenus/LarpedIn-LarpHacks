@@ -27,7 +27,23 @@ export interface ComposerInput {
   learningIds: [string, string, string];
   conclusionId: string;
   hashtagIds: string[];
+  format?: 'legacy' | 'personal';
+  customHook?: string;
+  customConclusion?: string;
+  moment?: string;
+  person?: string;
+  nextStep?: string;
 }
+
+export type ComposerTextSlot = 'hook' | 'moment' | 'person' | 'nextStep' | 'conclusion';
+export type ComposerAnswer = { value: string; id?: string; custom: boolean };
+export type ComposerDraft = {
+  answers: Partial<Record<ComposerTextSlot, ComposerAnswer>>;
+  hashtagIds: string[];
+  active: ComposerTextSlot | 'hashtags';
+  customOpen: boolean;
+  customDraft: string;
+};
 
 export interface AiPreset {
   source: 'gemini' | 'fallback';
@@ -87,6 +103,8 @@ export interface DemoState {
     conclusionId: string | null;
     hashtagIds: string[];
   };
+  composerInput: ComposerInput | null;
+  composerDraft: ComposerDraft;
   postText: string;
   postPublished: boolean;
   /** Selected avatar variant (see AVATAR_ITEMS). Cosmetics only. */
@@ -115,7 +133,7 @@ export type DemoAction =
   | { type: 'TOGGLE_HASHTAG'; hashtagId: string }
   | { type: 'SET_PRESET'; preset: { hookId: string; learningIds: string[]; conclusionId: string; hashtagIds: string[] } }
   | { type: 'SET_COMPOSER_INPUT'; input: ComposerInput }
-  | { type: 'SET_COMPOSER_SELECTIONS'; selections: DemoState['selections'] }
+  | { type: 'SET_COMPOSER_DRAFT'; draft: ComposerDraft }
   | { type: 'SET_POST_TEXT'; text: string }
   | { type: 'PUBLISH_POST' }
   | { type: 'SUBMIT_STAND_UP'; bullet1: string; bullet2: string }
@@ -132,6 +150,10 @@ export const initialState: DemoState = {
   completedPrompts: [],
   photos: { room: null, selfie: null, banner: null, handshake: null },
   selections: { hookId: null, learningIds: [], conclusionId: null, hashtagIds: [] },
+  composerInput: null,
+  composerDraft: {
+    answers: {}, hashtagIds: [], active: 'hook', customOpen: false, customDraft: '',
+  },
   postText: '',
   postPublished: false,
   avatarItem: 'base',

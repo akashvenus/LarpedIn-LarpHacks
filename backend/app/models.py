@@ -10,6 +10,12 @@ class ComposeRequest(BaseModel):
     learningIds: list[str]
     conclusionId: str
     hashtagIds: list[str]
+    format: Literal["legacy", "personal"] = "legacy"
+    customHook: str = Field(default="", max_length=280)
+    customConclusion: str = Field(default="", max_length=280)
+    moment: str = Field(default="", max_length=280)
+    person: str = Field(default="", max_length=120)
+    nextStep: str = Field(default="", max_length=280)
 
 
 class ComposeResponse(BaseModel):
@@ -59,6 +65,34 @@ class SavedSelections(BaseModel):
     hashtagIds: list[str]
 
 
+class SavedComposerInput(BaseModel):
+    eventId: str
+    hookId: str
+    learningIds: list[str]
+    conclusionId: str
+    hashtagIds: list[str]
+    format: Literal["legacy", "personal"] = "legacy"
+    customHook: str = Field(default="", max_length=280)
+    customConclusion: str = Field(default="", max_length=280)
+    moment: str = Field(default="", max_length=280)
+    person: str = Field(default="", max_length=120)
+    nextStep: str = Field(default="", max_length=280)
+
+
+class SavedComposerAnswer(BaseModel):
+    value: str = Field(max_length=280)
+    id: str | None = None
+    custom: bool
+
+
+class SavedComposerDraft(BaseModel):
+    answers: dict[Literal["hook", "moment", "person", "nextStep", "conclusion"], SavedComposerAnswer]
+    hashtagIds: list[str]
+    active: Literal["hook", "moment", "person", "nextStep", "conclusion", "hashtags"]
+    customOpen: bool
+    customDraft: str = Field(max_length=280)
+
+
 class SavedPhotos(BaseModel):
     room: str | None = Field(max_length=2_500_000)
     selfie: str | None = Field(max_length=2_500_000)
@@ -72,6 +106,8 @@ class DemoStatePayload(BaseModel):
     completedPrompts: list[Literal["room", "selfie", "banner", "handshake"]]
     photos: SavedPhotos
     selections: SavedSelections
+    composerInput: SavedComposerInput | None
+    composerDraft: SavedComposerDraft
     postText: str
     postPublished: bool
     avatarItem: str

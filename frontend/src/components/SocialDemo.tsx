@@ -14,6 +14,7 @@ export interface SocialDemoProps {
    *  Live phase (published): feed post + automatic inbox message. */
   published: boolean;
   onPublish: (text: string) => void;
+  onEdit?: () => void;
 }
 
 function initials(name: string): string {
@@ -46,6 +47,7 @@ export function SocialDemo({
   outreachSent,
   published,
   onPublish,
+  onEdit,
 }: SocialDemoProps) {
   const [messageShown, setMessageShown] = useState(false);
 
@@ -98,6 +100,11 @@ export function SocialDemo({
             )}
             {photoGrid}
           </article>
+          {onEdit && (
+            <button type="button" className="btn btn-block social-edit" onClick={onEdit}>
+              Edit post
+            </button>
+          )}
           <button
             className="btn btn-primary btn-block"
             style={{ marginTop: 12 }}

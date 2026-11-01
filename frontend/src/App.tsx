@@ -45,8 +45,8 @@ export default function App() {
   const lastComposerInput = useRef<ComposerInput | null>(null);
   const publishedRef = useRef(false);
 
-  const handleComposerSelections = useCallback((selections: DemoState['selections']) => {
-    dispatch({ type: 'SET_COMPOSER_SELECTIONS', selections });
+  const handleComposerDraft = useCallback((draft: DemoState['composerDraft']) => {
+    dispatch({ type: 'SET_COMPOSER_DRAFT', draft });
   }, []);
   const navigate = useCallback((next: Screen) => {
     setScreen(next);
@@ -185,7 +185,7 @@ export default function App() {
     dispatch({ type: 'SET_POST_TEXT', text });
     dispatch({ type: 'PUBLISH_POST' });
     if (state.eventId && !state.giftOpened) navigate('gift');
-    const input = lastComposerInput.current ?? (
+    const input = lastComposerInput.current ?? state.composerInput ?? (
       state.eventId && state.selections.hookId && state.selections.conclusionId &&
       state.selections.learningIds.length === 3 && state.selections.hashtagIds.length > 0
         ? {
@@ -269,8 +269,8 @@ export default function App() {
           </div>
         ))}
 
-      {screen === 'composer' && selectedEvent && (
-        <div className="page-with-header">
+      {selectedEvent && (
+        <div className="page-with-header" style={{ display: screen === 'composer' ? undefined : 'none' }}>
           <header className="topbar">
             <button className="icon-btn" onClick={() => navigate('camera')} aria-label="Back to camera guide">
               ←
@@ -278,10 +278,12 @@ export default function App() {
             <span className="topbar-title">Post composer</span>
           </header>
           <PostComposer
+            key={selectedEvent.id}
             event={selectedEvent}
-            selections={state.selections}
-            onSelectionsChange={handleComposerSelections}
-            options={demo.composer}
+            demo={demo}
+            photos={photoList(state)}
+            draft={state.composerDraft}
+            onDraftChange={handleComposerDraft}
             onCompose={handleCompose}
             onComposed={handleComposed}
             onAiPreset={fetchAiPreset}
@@ -326,6 +328,7 @@ export default function App() {
             outreachSent={state.outreachSent}
             published={state.postPublished}
             onPublish={handlePublish}
+            onEdit={state.postText && selectedEvent && !state.postPublished ? () => navigate('composer') : undefined}
           />
         </div>
       )}

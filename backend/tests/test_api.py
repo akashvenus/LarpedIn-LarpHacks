@@ -275,3 +275,61 @@ def test_posts_limit_validation(monkeypatch):
     monkeypatch.delenv("DATABASE_URL", raising=False)
     assert client.get("/api/posts?limit=0").status_code == 422
     assert client.get("/api/posts?limit=51").status_code == 422
+
+
+def test_personal_post_formats_optional_details_and_preserves_legacy():
+    payload = {**good_payload(), "format": "personal"}
+    plain = compose(payload)
+    assert plain.status_code == 200
+    assert "I recently attended LarpHacks." in plain.json()["text"]
+    assert "One moment" not in plain.json()["text"]
+    assert "Next up:" not in plain.json()["text"]
+    filled = compose({**payload, "moment": " a demo! ", "person": "my team", "nextStep": "keep building"})
+    assert filled.status_code == 200
+    assert "One moment that stuck with me: a demo! A big thank you to my team." in filled.json()["text"]
+    assert "Next up: keep building." in filled.json()["text"]
+    assert "Here are three things I learned:" in compose(good_payload()).json()["text"]
+    assert compose({**payload, "moment": "x" * 281}).status_code == 422
+    assert compose({**payload, "format": "unknown"}).status_code == 422
+
+
+def test_personal_save_uses_composed_text(monkeypatch):
+    from datetime import datetime, timezone
+    from app import main
+
+    captured = {}
+    def fake_save(event, hook, learnings, conclusion, hashtags, text):
+        captured["text"] = text
+        return {"id": 1, "createdAt": datetime.now(timezone.utc), "eventId": event,
+                "hookId": hook, "learningIds": learnings, "conclusionId": conclusion,
+                "hashtagIds": hashtags, "text": text}
+
+    monkeypatch.setattr(main, "save_post", fake_save)
+    payload = {**good_payload(), "format": "personal", "moment": "our demo", "person": "the team", "nextStep": "ship it"}
+    response = client.post('/api/posts', json=payload)
+    assert response.status_code == 201
+    assert response.json()['text'] == captured['text'] == compose(payload).json()['text']
+
+
+def test_personal_custom_lines_and_validation(monkeypatch):
+    from datetime import datetime, timezone
+    from app import main
+
+    def fake_save(event, hook, learnings, conclusion, hashtags, text):
+        return {"id": 1, "createdAt": datetime.now(timezone.utc), "eventId": event,
+                "hookId": hook, "learningIds": learnings, "conclusionId": conclusion,
+                "hashtagIds": hashtags, "text": text}
+
+    monkeypatch.setattr(main, "save_post", fake_save)
+    payload = {**good_payload(), "format": "personal", "customHook": " My opening! ",
+               "customConclusion": "My closing", "moment": "the conversations",
+               "person": "everyone who showed up", "nextStep": "keep building"}
+    response = compose(payload)
+    assert response.status_code == 200
+    text = response.json()["text"]
+    assert text.startswith("My opening!\n\n")
+    assert "My closing." in text
+    assert client.post("/api/posts", json=payload).json()["text"] == text
+    assert compose({**payload, "customHook": "x" * 281}).status_code == 422
+    assert compose({**payload, "customConclusion": "x" * 281}).status_code == 422
+    assert compose({**payload, "format": "legacy"}).json()["text"] == compose(good_payload()).json()["text"]

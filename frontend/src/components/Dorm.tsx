@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { ASSETS, AVATAR_ITEMS } from '../assets/manifest';
+import { AVATAR_ITEMS } from '../assets/manifest';
 import { ItemId, SpotId } from '../domain/items';
 import { InventoryPanel } from './InventoryPanel';
 import { DormScene } from './room/DormScene';
@@ -45,6 +45,7 @@ export function Dorm({
   onRemoveItem,
 }: DormProps) {
   const [inventoryOpen, setInventoryOpen] = useState(false);
+  const [carryingId, setCarryingId] = useState<ItemId | null>(null);
   const [isStandUpOpen, setIsStandUpOpen] = useState(false);
   const [standUp, setStandUp] = useState(standUpDraft);
   const bullets = standUp.split('\n').map((line) => line.replace(/^\s*[•*-]\s*/, '').trim()).filter(Boolean);
@@ -74,13 +75,14 @@ export function Dorm({
       </header>
 
       <DormScene
-        avatarAsset={avatarEntry?.asset ?? ASSETS.avatar}
-        avatarScale={avatarEntry?.scale ?? 1}
+        avatar={avatarEntry ?? AVATAR_ITEMS[0]}
         lightsPlaced={roomItems.includes('rgb-lights')}
         unlockedItemIds={unlockedItemIds}
         placements={placements}
         onPlaceItem={onPlaceItem}
         onRemoveItem={onRemoveItem}
+        carryingId={carryingId}
+        onCarryItem={setCarryingId}
       >
         <button
           className="dorm-inventory-btn"
@@ -156,6 +158,13 @@ export function Dorm({
         roomItems={roomItems}
         onSelectAvatar={onSelectAvatar}
         onToggleRoomItem={onToggleRoomItem}
+        unlockedItemIds={unlockedItemIds}
+        placements={placements}
+        onCarryItem={setCarryingId}
+        onDropItem={(itemId, x, y) => {
+          window.dispatchEvent(new CustomEvent('room-item-drop', { detail: { itemId, x, y } }));
+          setInventoryOpen(false);
+        }}
         onClose={() => setInventoryOpen(false)}
       />
     </>

@@ -49,6 +49,30 @@ export function worldDirection(input: { x: number; y: number }, yaw: number): Ve
   };
 }
 
+/** Yaw that points the character, whose model faces +z, along direction. */
+export function headingOf(direction: Vec2): number {
+  return Math.atan2(direction.x, direction.z);
+}
+
+/** Fraction of the remaining distance to cover this frame; independent of frame rate. */
+export function dampFactor(rate: number, dt: number): number {
+  return 1 - Math.exp(-rate * dt);
+}
+
+/** Eases an angle toward target along the shorter way round. The result is not wrapped. */
+export function dampAngle(current: number, target: number, rate: number, dt: number): number {
+  const difference = Math.atan2(Math.sin(target - current), Math.cos(target - current));
+  return current + difference * dampFactor(rate, dt);
+}
+
+export function dampVelocity(current: Vec2, target: Vec2, rate: number, dt: number): Vec2 {
+  const factor = dampFactor(rate, dt);
+  return {
+    x: current.x + (target.x - current.x) * factor,
+    z: current.z + (target.z - current.z) * factor,
+  };
+}
+
 const CAMERA_PROBE_STEPS = 16;
 
 /**

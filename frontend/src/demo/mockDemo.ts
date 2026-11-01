@@ -45,6 +45,9 @@ export const MOCK_DEMO: DemoData = {
       { id: 'hook-humbled', text: "Nobody should have to say 'synergy,' but here we are." },
       { id: 'hook-energy', text: '10/10 would optimize my career trajectory again.' },
       { id: 'hook-notebook', text: 'Day 1 of pretending I was born ready for the industry.' },
+      { id: 'hook-personal-1', text: 'I came with a laptop and an unreasonable amount of optimism.' },
+      { id: 'hook-personal-2', text: 'I went looking for inspiration and found a few more tabs to open.' },
+      { id: 'hook-personal-3', text: 'Another day of turning caffeine and curiosity into a career strategy.' },
     ],
     learnings: [
       { id: 'learn-community', text: 'community beats credential, every time' },
@@ -58,6 +61,9 @@ export const MOCK_DEMO: DemoData = {
       { id: 'end-building', text: 'Excited to keep building, learning, and pretending I have it all figured out.' },
       { id: 'end-grateful', text: "Grateful for everyone who made today what it was (and for the coffee)." },
       { id: 'end-next', text: 'Now if you will, I have a 6 a.m. stand-up to "own" tomorrow.' },
+      { id: 'end-personal-1', text: 'Grateful for the conversations, the caffeine, and the chance to keep learning.' },
+      { id: 'end-personal-2', text: 'Taking the ideas with me and adding the rest to my very ambitious to-do list.' },
+      { id: 'end-personal-3', text: 'Proof that showing up is a pretty good first step, even without a five-year plan.' },
     ],
     hashtags: [
       { id: 'ai', text: '#AI' },

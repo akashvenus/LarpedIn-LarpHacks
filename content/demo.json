@@ -36,7 +36,10 @@
       {"id": "hook-1", "text": "I didn't expect one conversation to change my perspective on building."},
       {"id": "hook-2", "text": "They told me first-year was too early to think about my personal brand. They were wrong."},
       {"id": "hook-3", "text": "I walked in with a laptop and left with a framework for life."},
-      {"id": "hook-4", "text": "Most people spent their Sunday resting. I spent mine compounding."}
+      {"id": "hook-4", "text": "Most people spent their Sunday resting. I spent mine compounding."},
+      {"id": "hook-personal-1", "text": "I came with a laptop and an unreasonable amount of optimism."},
+      {"id": "hook-personal-2", "text": "I went looking for inspiration and found a few more tabs to open."},
+      {"id": "hook-personal-3", "text": "Another day of turning caffeine and curiosity into a career strategy."}
     ],
     "learnings": [
       {"id": "learn-1", "text": "community is a force multiplier"},
@@ -49,7 +52,10 @@
     "conclusions": [
       {"id": "end-1", "text": "Excited to keep building and learning."},
       {"id": "end-2", "text": "Grateful for the journey, and humbled to be just getting started."},
-      {"id": "end-3", "text": "If you're hiring interns for summer 2027, my inbox is open."}
+      {"id": "end-3", "text": "If you're hiring interns for summer 2027, my inbox is open."},
+      {"id": "end-personal-1", "text": "Grateful for the conversations, the caffeine, and the chance to keep learning."},
+      {"id": "end-personal-2", "text": "Taking the ideas with me and adding the rest to my very ambitious to-do list."},
+      {"id": "end-personal-3", "text": "Proof that showing up is a pretty good first step, even without a five-year plan."}
     ],
     "hashtags": [
       {"id": "ai", "text": "#AI"},

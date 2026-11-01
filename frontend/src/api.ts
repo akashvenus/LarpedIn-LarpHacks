@@ -147,6 +147,23 @@ export function localCompose(input: ComposerInput, demo: DemoData): string {
     if (!find(demo.composer.hashtags, id)) throw new ApiError(`422: unknown hashtagId "${id}"`);
   }
 
+  if (input.format === 'personal') {
+    for (const [value, limit] of [[input.customHook, 280], [input.customConclusion, 280], [input.moment, 280], [input.person, 120], [input.nextStep, 280]] as const) {
+      if (value && Array.from(value).length > limit) throw new ApiError('422: personal detail is too long');
+    }
+    const sentence = (value: string) => /[.!?]$/.test(value.trim()) ? value.trim() : `${value.trim()}.`;
+    const paragraphs = [input.customHook?.trim() ? sentence(input.customHook) : find(demo.composer.hooks, input.hookId)!.text, `I recently attended ${event.title}.`];
+    const details = [];
+    if (input.moment?.trim()) details.push(`One moment that stuck with me: ${sentence(input.moment)}`);
+    if (input.person?.trim()) details.push(`A big thank you to ${sentence(input.person)}`);
+    if (details.length) paragraphs.push(details.join(' '));
+    const closing = [];
+    if (input.nextStep?.trim()) closing.push(`Next up: ${sentence(input.nextStep)}`);
+    closing.push(input.customConclusion?.trim() ? sentence(input.customConclusion) : find(demo.composer.conclusions, input.conclusionId)!.text);
+    paragraphs.push(closing.join(' '), hashtagIds.map((id) => find(demo.composer.hashtags, id)!.text).join(' '));
+    return paragraphs.join('\n\n');
+  }
+
   const text = [
     find(demo.composer.hooks, input.hookId)!.text,
     '',
