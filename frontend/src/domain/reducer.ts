@@ -1,5 +1,6 @@
 import { findItem, findSpot } from './items';
-import { unlockedItemIds } from './selectors';
+import { derivedXp, unlockedItemIds } from './selectors';
+import { ACCESSORIES, HELD_PROPS } from './gear';
 import {
   DemoAction,
   DemoState,
@@ -201,6 +202,14 @@ export function demoReducer(state: DemoState, action: DemoAction): DemoState {
       const remaining = Object.entries(state.placements).filter(([id]) => id !== action.spotId);
       return { ...state, placements: Object.fromEntries(remaining) };
     }
+
+    case 'SET_ACCESSORY':
+      if (action.itemId && !ACCESSORIES.some((item) => item.id === action.itemId && item.unlockXp <= derivedXp(state))) return state;
+      return { ...state, accessory: action.itemId };
+
+    case 'SET_HELD_PROP':
+      if (action.itemId && !HELD_PROPS.some((item) => item.id === action.itemId && item.unlockXp <= derivedXp(state))) return state;
+      return { ...state, heldProp: action.itemId };
 
     case 'SET_AVATAR_ITEM':
       if (state.avatarItem === action.itemId) return state;

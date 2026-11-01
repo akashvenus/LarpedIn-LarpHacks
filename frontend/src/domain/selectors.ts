@@ -37,6 +37,12 @@ const ITEM_UNLOCKS: Record<ItemId, (state: DemoState) => boolean> = {
   poster: (state) => state.eventId !== null,
   mug: (state) => state.standUpSubmitted,
   mousepad: (state) => state.postPublished,
+  notes: () => true,
+  pivot: (state) => state.eventId !== null,
+  vision: (state) => state.postPublished,
+  whiteboard: (state) => state.eventId !== null,
+  plant: (state) => state.standUpSubmitted,
+  books: (state) => state.standUpSubmitted,
 };
 
 /** Items available in the dorm box. Derived from progress, so they cannot be lost. */

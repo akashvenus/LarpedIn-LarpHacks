@@ -56,6 +56,9 @@ export default function App() {
   const [editingPost, setEditingPost] = useState(false);
   const [sendingRecruiter, setSendingRecruiter] = useState(false);
   const [composerVersion, setComposerVersion] = useState(0);
+  const [xpPulse, setXpPulse] = useState(0);
+  const previousXp = useRef(0);
+  const xp = derivedXp(state);
   const [replacement, setReplacement] = useState<{ text: string; input: ComposerInput } | null>(null);
 
   const handleComposerDraft = useCallback((draft: DemoState['composerDraft']) => {
@@ -65,6 +68,11 @@ export default function App() {
     setScreen(next);
     dispatch({ type: 'SET_CURRENT_SCREEN', screen: next });
   }, []);
+
+  useEffect(() => {
+    if (xp > previousXp.current) setXpPulse((pulse) => pulse + 1);
+    previousXp.current = xp;
+  }, [xp]);
 
   useEffect(() => {
     let alive = true;
@@ -300,7 +308,8 @@ export default function App() {
       {!saveError && saving && <div className="persistence-status">Saving progress…</div>}
       {screen === 'dorm' && (
         <Dorm
-          xp={derivedXp(state)}
+          xp={xp}
+          xpPulse={xpPulse}
           standUpSubmitted={state.standUpSubmitted}
           standUpBullets={state.standUpBullets}
           standUpDraft={state.standUpDraft}
@@ -308,6 +317,10 @@ export default function App() {
           onStandUpDraftChange={(draft) => dispatch({ type: 'SET_STAND_UP_DRAFT', draft })}
           onFindEvent={() => navigate('events')}
           avatarItem={state.avatarItem}
+          accessory={state.accessory}
+          heldProp={state.heldProp}
+          onSelectAccessory={(itemId) => dispatch({ type: 'SET_ACCESSORY', itemId })}
+          onSelectHeldProp={(itemId) => dispatch({ type: 'SET_HELD_PROP', itemId })}
           roomItems={state.roomItems}
           onSelectAvatar={(itemId) => dispatch({ type: 'SET_AVATAR_ITEM', itemId })}
           onToggleRoomItem={(itemId) => dispatch({ type: 'TOGGLE_ROOM_ITEM', itemId })}

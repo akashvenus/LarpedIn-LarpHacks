@@ -2,6 +2,7 @@ import { useFrame } from '@react-three/fiber';
 import { MutableRefObject, useEffect, useLayoutEffect, useMemo, useRef } from 'react';
 import { BackSide, CanvasTexture, CatmullRomCurve3, Color, Group, SRGBColorSpace, Vector3 } from 'three';
 import { AvatarItem, HoodieLook } from '../../assets/manifest';
+import { AccessoryId, HeldPropId } from '../../domain/gear';
 import { dampFactor } from './movement';
 
 const SKIN = '#f7f7f9';
@@ -195,8 +196,89 @@ function ClipOnMic() {
   );
 }
 
+function PropellerCap({ xpPulse }: { xpPulse: number }) {
+  const propeller = useRef<Group>(null);
+  const spinRemaining = useRef(0);
+  useEffect(() => {
+    if (xpPulse > 0 && !window.matchMedia?.('(prefers-reduced-motion: reduce)').matches) spinRemaining.current = 2;
+  }, [xpPulse]);
+  useFrame((_, delta) => {
+    if (!propeller.current || spinRemaining.current <= 0) return;
+    const step = Math.min(delta, spinRemaining.current);
+    propeller.current.rotation.y += step * Math.PI * 5;
+    spinRemaining.current -= step;
+  });
+  return (
+    <group position={[0, 1.035, 0]}>
+      {['#ea4335', '#fbbc04', '#34a853', '#4285f4'].map((color, index) => (
+        <mesh key={color} scale={[1.15, 0.65, 1]}>
+          <sphereGeometry args={[0.24, 16, 12, index * Math.PI / 2, Math.PI / 2, 0, Math.PI / 2]} />
+          <CelMaterial color={color} />
+        </mesh>
+      ))}
+      <mesh position={[0, -0.006, 0.12]} scale={[1.15, 0.23, 0.75]}>
+        <sphereGeometry args={[0.24, 24, 12]} /><CelMaterial color="#4285f4" />
+      </mesh>
+      <mesh position={[0, 0.18, 0]}><cylinderGeometry args={[0.008, 0.008, 0.07, 8]} /><meshBasicMaterial color={INK} /></mesh>
+      <group ref={propeller} position={[0, 0.22, 0]}>
+        <mesh position={[-0.09, 0, 0]}><boxGeometry args={[0.18, 0.012, 0.045]} /><CelMaterial color="#ea4335" /></mesh>
+        <mesh position={[0.09, 0, 0]}><boxGeometry args={[0.18, 0.012, 0.045]} /><CelMaterial color="#fbbc04" /></mesh>
+        <mesh><sphereGeometry args={[0.018, 12, 8]} /><CelMaterial color="#4285f4" /></mesh>
+      </group>
+    </group>
+  );
+}
+
+const SPEAKER_LABEL: HoodieLook = { color: '#ffffff', label: 'SPEAKER' };
+function Accessory({ item, xpPulse }: { item: AccessoryId; xpPulse: number }) {
+  const label = useLabelTexture(item === 'lanyard' ? SPEAKER_LABEL : undefined);
+  if (item === 'propeller-cap') return <PropellerCap xpPulse={xpPulse} />;
+  if (item === 'glasses') return (
+    <group position={[0, 0.855, 0.307]}>
+      {[-1, 1].map((side) => <mesh key={side} position={[side * 0.135, 0, 0]}>
+        <torusGeometry args={[0.052, 0.007, 8, 24]} /><meshBasicMaterial color={INK} toneMapped={false} />
+      </mesh>)}
+      <mesh><boxGeometry args={[0.16, 0.009, 0.01]} /><meshBasicMaterial color={INK} toneMapped={false} /></mesh>
+    </group>
+  );
+  return (
+    <group>
+      {[-1, 1].map((side) => <mesh key={side} position={[side * 0.065, 0.52, 0.18]} rotation={[0, 0, side * 0.5]}>
+        <cylinderGeometry args={[0.008, 0.008, 0.18, 8]} /><meshBasicMaterial color="#0a66c2" toneMapped={false} />
+      </mesh>)}
+      <mesh position={[0, 0.405, 0.205]}><boxGeometry args={[0.115, 0.09, 0.015]} /><meshBasicMaterial color="#faf8ef" toneMapped={false} /></mesh>
+      {label && <mesh position={[0, 0.405, 0.214]}><planeGeometry args={[0.1, 0.027]} /><meshBasicMaterial map={label} transparent color="#0a66c2" toneMapped={false} /></mesh>}
+    </group>
+  );
+}
+
+const PITCH_LABEL: HoodieLook = { color: '#25354d', label: 'UBER FOR…' };
+const COFFEE_LABEL: HoodieLook = { color: '#fff5d7', label: 'PRE-SEED FUEL' };
+function HeldItem({ item }: { item: HeldPropId }) {
+  const label = useLabelTexture(item === 'pitch-deck' ? PITCH_LABEL : COFFEE_LABEL);
+  if (item === 'coffee') return (
+    <group position={[0.08, -0.22, 0.12]}>
+      <mesh><cylinderGeometry args={[0.095, 0.065, 0.24, 20]} /><CelMaterial color="#c88a55" /></mesh>
+      <mesh position={[0, 0.125, 0]}><cylinderGeometry args={[0.1, 0.1, 0.025, 20]} /><CelMaterial color="#f4efe2" /></mesh>
+      <mesh position={[0.04, 0.19, 0]} rotation={[0, 0, -0.25]}><cylinderGeometry args={[0.007, 0.007, 0.13, 8]} /><CelMaterial color="#3c765d" /></mesh>
+      <mesh position={[0, 0, 0.097]}><planeGeometry args={[0.15, 0.05]} /><meshBasicMaterial color="#fff5d7" toneMapped={false} /></mesh>
+      {label && <mesh position={[0, 0, 0.099]}><planeGeometry args={[0.14, 0.035]} /><meshBasicMaterial map={label} transparent color="#242238" toneMapped={false} /></mesh>}
+    </group>
+  );
+  return (
+    <group position={[0.08, -0.22, 0.12]}>
+      <mesh><boxGeometry args={[0.22, 0.24, 0.025]} /><CelMaterial color="#26364c" /></mesh>
+      <mesh position={[0, 0, 0.014]}><planeGeometry args={[0.19, 0.2]} /><meshBasicMaterial color="#e6f1fa" toneMapped={false} /></mesh>
+      {label && <mesh position={[0, 0, 0.016]}><planeGeometry args={[0.18, 0.045]} /><meshBasicMaterial map={label} transparent toneMapped={false} color="#0a66c2" /></mesh>}
+    </group>
+  );
+}
+
 export interface CharacterProps {
   avatar: AvatarItem;
+  xpPulse: number;
+  accessory: AccessoryId | null;
+  heldProp: HeldPropId | null;
   motionRef: MutableRefObject<CharacterMotion>;
 }
 
@@ -204,7 +286,7 @@ export interface CharacterProps {
  * Jointed model of the avatar art, which only exists as a front view. Faces +z at heading 0.
  * Keep hoodie and mic details in step with the matching images in public/assets.
  */
-export function Character({ avatar, motionRef }: CharacterProps) {
+export function Character({ avatar, xpPulse, accessory, heldProp, motionRef }: CharacterProps) {
   const rootRef = useRef<Group>(null);
   const bodyRef = useRef<Group>(null);
   const leftLegRef = useRef<Group>(null);
@@ -254,6 +336,7 @@ export function Character({ avatar, motionRef }: CharacterProps) {
             <group rotation={[0, 0, side * ARM_REST_ANGLE]}>
               <Limb radius={0.058} length={0.16} color={sleeve} position={[0, -0.09, 0]} />
               <Ball radius={0.06} color={SKIN} position={[0, -0.2, 0]} />
+              {side === 1 && heldProp && <HeldItem item={heldProp} />}
             </group>
           </group>
         ))}
@@ -272,6 +355,7 @@ export function Character({ avatar, motionRef }: CharacterProps) {
           </mesh>
         </group>
         <Face />
+        {accessory && <Accessory item={accessory} xpPulse={xpPulse} />}
       </group>
     </group>
   );

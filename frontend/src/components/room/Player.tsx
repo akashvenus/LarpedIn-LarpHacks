@@ -2,6 +2,7 @@ import { useFrame } from '@react-three/fiber';
 import { MutableRefObject, useRef } from 'react';
 import { Group, Vector3 } from 'three';
 import { AvatarItem } from '../../assets/manifest';
+import { AccessoryId, HeldPropId } from '../../domain/gear';
 import { Character, CharacterMotion } from './Character';
 import { CAMERA_BOUNDS, CRATE, CRATE_CENTER, OBSTACLES, PLAYER_RADIUS, WALK_BOUNDS, WARDROBE } from './layout';
 import {
@@ -31,6 +32,9 @@ export const PLAYER_START: Vec2 = { x: 0.3, z: 0.4 };
 
 export interface PlayerProps {
   avatar: AvatarItem;
+  xpPulse: number;
+  accessory: AccessoryId | null;
+  heldProp: HeldPropId | null;
   isFrozen: boolean;
   readInput: () => { x: number; y: number };
   yawRef: MutableRefObject<number>;
@@ -38,7 +42,7 @@ export interface PlayerProps {
 }
 
 /** Walking character and its follow camera. Position lives in refs because it changes every frame. */
-export function Player({ avatar, isFrozen, readInput, yawRef, onNearCrateChange }: PlayerProps) {
+export function Player({ avatar, xpPulse, accessory, heldProp, isFrozen, readInput, yawRef, onNearCrateChange }: PlayerProps) {
   const rootRef = useRef<Group>(null);
   const positionRef = useRef<Vec2>(PLAYER_START);
   const velocityRef = useRef<Vec2>({ x: 0, z: 0 });
@@ -100,7 +104,7 @@ export function Player({ avatar, isFrozen, readInput, yawRef, onNearCrateChange 
         <circleGeometry args={[0.32, 24]} />
         <meshBasicMaterial color="#000000" transparent opacity={0.22} depthWrite={false} />
       </mesh>
-      <Character avatar={avatar} motionRef={motionRef} />
+      <Character avatar={avatar} xpPulse={xpPulse} accessory={accessory} heldProp={heldProp} motionRef={motionRef} />
     </group>
   );
 }

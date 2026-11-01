@@ -11,6 +11,7 @@
  */
 
 import { ItemId, SpotId } from './items';
+import { AccessoryId, HeldPropId } from './gear';
 
 export type PromptId = 'room' | 'selfie' | 'banner' | 'handshake';
 
@@ -112,6 +113,8 @@ export interface DemoState {
   postPublished: boolean;
   /** Selected avatar variant (see AVATAR_ITEMS). Cosmetics only. */
   avatarItem: string;
+  accessory: AccessoryId | null;
+  heldProp: HeldPropId | null;
   /** Placed room item ids (see ROOM_ITEMS). Static decor, toggleable. */
   roomItems: string[];
   standUpDraft: string;
@@ -146,6 +149,8 @@ export type DemoAction =
   | { type: 'SUBMIT_STAND_UP'; bullet1: string; bullet2: string }
   | { type: 'SET_STAND_UP_DRAFT'; draft: string }
   | { type: 'SET_AVATAR_ITEM'; itemId: string }
+  | { type: 'SET_ACCESSORY'; itemId: AccessoryId | null }
+  | { type: 'SET_HELD_PROP'; itemId: HeldPropId | null }
   | { type: 'TOGGLE_ROOM_ITEM'; itemId: string }
   | { type: 'GIFT_ANIMATION_DONE' }
   | { type: 'PLACE_ITEM'; itemId: ItemId; spotId: SpotId }
@@ -167,6 +172,8 @@ export const initialState: DemoState = {
   postText: '',
   postPublished: false,
   avatarItem: 'base',
+  accessory: null,
+  heldProp: null,
   roomItems: [],
   standUpDraft: '',
   standUpSubmitted: false,

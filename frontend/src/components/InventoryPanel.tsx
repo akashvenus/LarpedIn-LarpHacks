@@ -1,11 +1,17 @@
 import { useRef, useState } from 'react';
 import { ASSETS } from '../assets/manifest';
 import { ItemId, ITEMS, SpotId } from '../domain/items';
+import { ACCESSORIES, HELD_PROPS, AccessoryId, HeldPropId } from '../domain/gear';
 import { AVATAR_ITEMS, ROOM_ITEMS } from '../assets/manifest';
 
 export interface InventoryPanelProps {
   open: boolean;
   avatarItem: string;
+  accessory: AccessoryId | null;
+  heldProp: HeldPropId | null;
+  xp: number;
+  onSelectAccessory: (itemId: AccessoryId | null) => void;
+  onSelectHeldProp: (itemId: HeldPropId | null) => void;
   roomItems: string[];
   onSelectAvatar: (itemId: string) => void;
   onToggleRoomItem: (itemId: string) => void;
@@ -24,6 +30,11 @@ export interface InventoryPanelProps {
 export function InventoryPanel({
   open,
   avatarItem,
+  accessory,
+  heldProp,
+  xp,
+  onSelectAccessory,
+  onSelectHeldProp,
   roomItems,
   onSelectAvatar,
   onToggleRoomItem,
@@ -117,6 +128,28 @@ export function InventoryPanel({
           </div>
         </section>
 
+        <section>
+          <h3 className="inv-title">Wear</h3>
+          <div className="avatar-look-row">
+            {ACCESSORIES.map((item) => <button key={item.id} type="button" className={`inv-tile${accessory === item.id ? ' sel' : ''}`}
+              aria-pressed={accessory === item.id} disabled={xp < item.unlockXp}
+              onClick={() => onSelectAccessory(accessory === item.id ? null : item.id)}>
+              <img src={item.image} alt="" /><span className="inv-name">{item.name}</span>
+              {xp < item.unlockXp && <span className="inv-name">Unlock at {item.unlockXp} XP</span>}
+            </button>)}
+          </div>
+        </section>
+        <section>
+          <h3 className="inv-title">Hold</h3>
+          <div className="avatar-look-row">
+            {HELD_PROPS.map((item) => <button key={item.id} type="button" className={`inv-tile${heldProp === item.id ? ' sel' : ''}`}
+              aria-pressed={heldProp === item.id} disabled={xp < item.unlockXp}
+              onClick={() => onSelectHeldProp(heldProp === item.id ? null : item.id)}>
+              <img src={item.image} alt="" /><span className="inv-name">{item.name}</span>
+              {xp < item.unlockXp && <span className="inv-name">Unlock at {item.unlockXp} XP</span>}
+            </button>)}
+          </div>
+        </section>
         <section>
           <h3 className="inv-title">
             Room lighting
