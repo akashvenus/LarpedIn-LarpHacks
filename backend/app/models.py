@@ -114,6 +114,8 @@ class DemoStatePayload(BaseModel):
     postText: str
     postPublished: bool
     avatarItem: str
+    accessory: Literal["glasses", "lanyard", "propeller-cap"] | None = None
+    heldProp: Literal["coffee", "pitch-deck"] | None = None
     roomItems: list[str]
     standUpDraft: str
     standUpSubmitted: bool

@@ -953,3 +953,6 @@ h2 {
 .btn:focus-visible, .icon-btn:focus-visible, .dock-item:focus-visible { outline: 2px solid #0a66c2; outline-offset: 2px; }
 .btn-primary:hover:not(:disabled) { background: #004182; }
 .pill-featured { color: #80520b; background: #fff4d6; border-color: #e3c991; }
+
+.inv-tile:disabled { opacity: 0.55; cursor: not-allowed; }
+.inv-tile:focus-visible { outline: 2px solid #0a66c2; outline-offset: 2px; }

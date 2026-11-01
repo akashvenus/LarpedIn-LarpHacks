@@ -4,6 +4,7 @@ import { CSSProperties, MouseEvent, useEffect, useState } from 'react';
 import { Raycaster, Vector2 } from 'three';
 import { ASSETS, AvatarItem } from '../../assets/manifest';
 import { findItem, ItemId, SpotId } from '../../domain/items';
+import { AccessoryId, HeldPropId } from '../../domain/gear';
 import { findDropTarget } from './dropTarget';
 import { ItemBoxPanel } from './ItemBoxPanel';
 import { Joystick } from './Joystick';
@@ -17,6 +18,9 @@ const BOX_HOLD_MS = 700;
 
 export interface DormRoom3DProps {
   avatar: AvatarItem;
+  xpPulse: number;
+  accessory: AccessoryId | null;
+  heldProp: HeldPropId | null;
   lightsPlaced: boolean;
   unlockedItemIds: ItemId[];
   placements: Partial<Record<SpotId, ItemId>>;
@@ -29,6 +33,9 @@ export interface DormRoom3DProps {
 /** Walkable dorm: the 3D scene plus its on-screen controls. */
 export default function DormRoom3D({
   avatar,
+  xpPulse,
+  accessory,
+  heldProp,
   lightsPlaced,
   unlockedItemIds,
   placements,
@@ -107,6 +114,9 @@ export default function DormRoom3D({
           />
           <Player
             avatar={avatar}
+            xpPulse={xpPulse}
+            accessory={accessory}
+            heldProp={heldProp}
             isFrozen={isBoxOpen}
             readInput={readInput}
             yawRef={yawRef}

@@ -9,7 +9,8 @@ export type AssetName =
   | 'startupStickers'
   | 'founderPoster'
   | 'googleMug'
-  | 'mousepad';
+  | 'mousepad'
+  | 'miniWhiteboard' | 'deskPlant' | 'startupBooks' | 'visionBoard' | 'pivotSign' | 'stickyNotes';
 
 export const ASSETS: Record<AssetName, string> = {
   dormBackground: 'assets/dorm-background.jpg',
@@ -23,6 +24,12 @@ export const ASSETS: Record<AssetName, string> = {
   founderPoster: 'assets/sam-altman-poster.png',
   googleMug: 'assets/google-mug.png',
   mousepad: 'assets/mousepad.png',
+  miniWhiteboard: 'assets/room-items/whiteboard.svg',
+  deskPlant: 'assets/room-items/plant.svg',
+  startupBooks: 'assets/room-items/books.svg',
+  visionBoard: 'assets/room-items/vision-board.svg',
+  pivotSign: 'assets/room-items/pivot-sign.svg',
+  stickyNotes: 'assets/room-items/sticky-notes.svg',
 };
 
 /**

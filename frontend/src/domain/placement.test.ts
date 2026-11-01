@@ -5,12 +5,12 @@ import { initialState } from './types';
 
 describe('unlockedItemIds', () => {
   it('starts with only the starter item', () => {
-    expect(unlockedItemIds(initialState)).toEqual(['stickers']);
+    expect(unlockedItemIds(initialState)).toEqual(['stickers', 'notes']);
   });
 
   it('adds items as progress flags are set', () => {
     const state = { ...initialState, eventId: 'larphacks', standUpSubmitted: true, postPublished: true };
-    expect(unlockedItemIds(state)).toEqual(['stickers', 'poster', 'mug', 'mousepad']);
+    expect(unlockedItemIds(state)).toEqual(['stickers', 'poster', 'mug', 'mousepad', 'notes', 'pivot', 'vision', 'whiteboard', 'plant', 'books']);
   });
 });
 
@@ -57,5 +57,20 @@ describe('REMOVE_ITEM', () => {
 
   it('returns the same state for an empty spot', () => {
     expect(demoReducer(initialState, { type: 'REMOVE_ITEM', spotId: 'wall-bed' })).toBe(initialState);
+  });
+});
+
+describe('additional room locations', () => {
+  it('places desk items on the shelf, bed, or box and wall items beyond the window', () => {
+    const start = { ...initialState, eventId: 'larphacks', standUpSubmitted: true };
+    const shelf = demoReducer(start, { type: 'PLACE_ITEM', itemId: 'plant', spotId: 'shelf-top' });
+    const bed = demoReducer(shelf, { type: 'PLACE_ITEM', itemId: 'books', spotId: 'bed-foot' });
+    const box = demoReducer(bed, { type: 'PLACE_ITEM', itemId: 'mug', spotId: 'box-top' });
+    const wall = demoReducer(box, { type: 'PLACE_ITEM', itemId: 'notes', spotId: 'wall-window-far' });
+    expect(wall.placements).toMatchObject({ 'shelf-top': 'plant', 'bed-foot': 'books', 'box-top': 'mug', 'wall-window-far': 'notes' });
+  });
+
+  it('still rejects incompatible surfaces at the new locations', () => {
+    expect(demoReducer(initialState, { type: 'PLACE_ITEM', itemId: 'notes', spotId: 'shelf-top' })).toBe(initialState);
   });
 });

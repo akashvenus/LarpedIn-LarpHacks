@@ -1,11 +1,13 @@
 import { useState } from 'react';
 import { AVATAR_ITEMS } from '../assets/manifest';
 import { ItemId, SpotId } from '../domain/items';
+import { AccessoryId, HeldPropId } from '../domain/gear';
 import { InventoryPanel } from './InventoryPanel';
 import { DormScene } from './room/DormScene';
 
 export interface DormProps {
   xp: number;
+  xpPulse: number;
   standUpSubmitted: boolean;
   standUpBullets: { bullet1: string; bullet2: string } | null;
   standUpDraft: string;
@@ -13,6 +15,10 @@ export interface DormProps {
   onStandUpDraftChange: (draft: string) => void;
   onFindEvent: () => void;
   avatarItem: string;
+  accessory: AccessoryId | null;
+  heldProp: HeldPropId | null;
+  onSelectAccessory: (itemId: AccessoryId | null) => void;
+  onSelectHeldProp: (itemId: HeldPropId | null) => void;
   roomItems: string[];
   onSelectAvatar: (itemId: string) => void;
   onToggleRoomItem: (itemId: string) => void;
@@ -29,6 +35,7 @@ export interface DormProps {
  */
 export function Dorm({
   xp,
+  xpPulse,
   standUpSubmitted,
   standUpBullets,
   standUpDraft,
@@ -36,6 +43,10 @@ export function Dorm({
   onStandUpDraftChange,
   onFindEvent,
   avatarItem,
+  accessory,
+  heldProp,
+  onSelectAccessory,
+  onSelectHeldProp,
   roomItems,
   onSelectAvatar,
   onToggleRoomItem,
@@ -76,6 +87,9 @@ export function Dorm({
 
       <DormScene
         avatar={avatarEntry ?? AVATAR_ITEMS[0]}
+        xpPulse={xpPulse}
+        accessory={accessory}
+        heldProp={heldProp}
         lightsPlaced={roomItems.includes('rgb-lights')}
         unlockedItemIds={unlockedItemIds}
         placements={placements}
@@ -155,6 +169,11 @@ export function Dorm({
       <InventoryPanel
         open={inventoryOpen}
         avatarItem={avatarItem}
+        accessory={accessory}
+        heldProp={heldProp}
+        xp={xp}
+        onSelectAccessory={onSelectAccessory}
+        onSelectHeldProp={onSelectHeldProp}
         roomItems={roomItems}
         onSelectAvatar={onSelectAvatar}
         onToggleRoomItem={onToggleRoomItem}
