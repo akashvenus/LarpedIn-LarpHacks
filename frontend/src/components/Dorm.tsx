@@ -8,7 +8,9 @@ export interface DormProps {
   xp: number;
   standUpSubmitted: boolean;
   standUpBullets: { bullet1: string; bullet2: string } | null;
+  standUpDraft: string;
   onSubmitStandUp: (bullet1: string, bullet2: string) => void;
+  onStandUpDraftChange: (draft: string) => void;
   onFindEvent: () => void;
   avatarItem: string;
   roomItems: string[];
@@ -29,7 +31,9 @@ export function Dorm({
   xp,
   standUpSubmitted,
   standUpBullets,
+  standUpDraft,
   onSubmitStandUp,
+  onStandUpDraftChange,
   onFindEvent,
   avatarItem,
   roomItems,
@@ -43,7 +47,7 @@ export function Dorm({
   const [inventoryOpen, setInventoryOpen] = useState(false);
   const [carryingId, setCarryingId] = useState<ItemId | null>(null);
   const [isStandUpOpen, setIsStandUpOpen] = useState(false);
-  const [standUp, setStandUp] = useState('');
+  const [standUp, setStandUp] = useState(standUpDraft);
   const bullets = standUp.split('\n').map((line) => line.replace(/^\s*[•*-]\s*/, '').trim()).filter(Boolean);
 
   const avatarEntry = AVATAR_ITEMS.find((item) => item.id === avatarItem);
@@ -129,7 +133,10 @@ export function Dorm({
               <textarea
                 placeholder={'• Win (did)\n• Next (todo)'}
                 value={standUp}
-                onChange={(e) => setStandUp(e.target.value)}
+                onChange={(e) => {
+                  setStandUp(e.target.value);
+                  onStandUpDraftChange(e.target.value);
+                }}
                 aria-label="Stand-up: win and next steps"
               />
             </div>

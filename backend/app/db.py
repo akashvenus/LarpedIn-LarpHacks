@@ -2,6 +2,7 @@ import os
 
 import psycopg
 from psycopg.rows import dict_row
+from psycopg.types.json import Jsonb
 
 
 class DatabaseUnavailable(Exception):
@@ -18,6 +19,14 @@ CREATE TABLE IF NOT EXISTS posts (
     conclusion_id TEXT NOT NULL,
     hashtag_ids TEXT[] NOT NULL,
     post_text TEXT NOT NULL
+)
+"""
+
+CREATE_DEMO_STATES_TABLE = """
+CREATE TABLE IF NOT EXISTS demo_states (
+    client_id UUID PRIMARY KEY,
+    state JSONB NOT NULL,
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
 )
 """
 
@@ -89,3 +98,33 @@ def check_db():
             conn.execute("SELECT 1")
     except psycopg.Error as error:
         raise DatabaseUnavailable("Database check failed") from error
+
+
+def load_demo_state(client_id):
+    try:
+        with _connect() as conn:
+            conn.execute(CREATE_DEMO_STATES_TABLE)
+            row = conn.execute(
+                "SELECT state FROM demo_states WHERE client_id = %s",
+                (client_id,),
+            ).fetchone()
+    except psycopg.Error as error:
+        raise DatabaseUnavailable("Could not load saved progress") from error
+    return row["state"] if row else None
+
+
+def save_demo_state(client_id, state):
+    try:
+        with _connect() as conn:
+            conn.execute(CREATE_DEMO_STATES_TABLE)
+            conn.execute(
+                """
+                INSERT INTO demo_states (client_id, state)
+                VALUES (%s, %s)
+                ON CONFLICT (client_id) DO UPDATE
+                SET state = EXCLUDED.state, updated_at = now()
+                """,
+                (client_id, Jsonb(state)),
+            )
+    except psycopg.Error as error:
+        raise DatabaseUnavailable("Could not save progress") from error

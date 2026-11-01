@@ -1,20 +1,22 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { localCompose } from '../api';
-import { AiPreset, ComposerInput, DemoData, DemoEvent, PhotoRef, PROMPTS } from '../domain/types';
+import { AiPreset, ComposerAnswer, ComposerDraft, ComposerInput, ComposerTextSlot, DemoData, DemoEvent, PhotoRef, PROMPTS } from '../domain/types';
 
 export interface PostComposerProps {
   event: DemoEvent;
   demo: DemoData;
   photos: PhotoRef[];
+  draft: ComposerDraft;
+  onDraftChange: (draft: ComposerDraft) => void;
   onCompose: (input: ComposerInput) => Promise<string>;
   onComposed: (text: string, input: ComposerInput) => void;
   onAiPreset: (eventId: string) => Promise<AiPreset>;
 }
 
-type TextSlot = 'hook' | 'moment' | 'person' | 'nextStep' | 'conclusion';
-type Slot = TextSlot | 'hashtags';
-type Answer = { value: string; id?: string; custom: boolean };
-type Answers = Partial<Record<TextSlot, Answer>>;
+type TextSlot = ComposerTextSlot;
+type Slot = ComposerDraft['active'];
+type Answer = ComposerAnswer;
+type Answers = ComposerDraft['answers'];
 const slots: Slot[] = ['hook', 'moment', 'person', 'nextStep', 'conclusion', 'hashtags'];
 const labels: Record<Slot, string> = {
   hook: 'Opening line', moment: 'A moment or takeaway', person: 'Someone to thank',
@@ -27,16 +29,20 @@ const suggestions: Record<'moment' | 'person' | 'nextStep', string[]> = {
 };
 const sentence = (value: string) => /[.!?]$/.test(value.trim()) ? value.trim() : `${value.trim()}.`;
 
-export function PostComposer({ event, demo, photos, onCompose, onComposed, onAiPreset }: PostComposerProps) {
+export function PostComposer({ event, demo, photos, draft, onDraftChange, onCompose, onComposed, onAiPreset }: PostComposerProps) {
   const options = demo.composer;
-  const [answers, setAnswers] = useState<Answers>({});
-  const [hashtagIds, setHashtagIds] = useState<string[]>([]);
-  const [active, setActive] = useState<Slot>('hook');
-  const [customOpen, setCustomOpen] = useState(false);
-  const [customDraft, setCustomDraft] = useState('');
+  const [answers, setAnswers] = useState<Answers>(draft.answers);
+  const [hashtagIds, setHashtagIds] = useState<string[]>(draft.hashtagIds);
+  const [active, setActive] = useState<Slot>(draft.active);
+  const [customOpen, setCustomOpen] = useState(draft.customOpen);
+  const [customDraft, setCustomDraft] = useState(draft.customDraft);
   const [loading, setLoading] = useState<'ai' | 'compose' | null>(null);
   const [error, setError] = useState<string | null>(null);
   const ready = slots.slice(0, 5).every((slot) => !!answers[slot as TextSlot]?.value.trim()) && hashtagIds.length > 0;
+
+  useEffect(() => {
+    onDraftChange({ answers, hashtagIds, active, customOpen, customDraft });
+  }, [answers, hashtagIds, active, customOpen, customDraft, onDraftChange]);
 
   const selectSlot = (slot: Slot) => {
     setActive(slot);
