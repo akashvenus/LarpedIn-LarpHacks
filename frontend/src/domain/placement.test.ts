@@ -6,18 +6,18 @@ import { ITEMS_BY_UNLOCK } from './items';
 
 it('orders room items by the progress needed to unlock them', () => {
   expect(ITEMS_BY_UNLOCK.map((item) => item.id)).toEqual([
-    'stickers', 'notes', 'mug', 'plant', 'books', 'poster', 'pivot', 'whiteboard', 'mousepad', 'vision',
+    'sama-lisa', 'stickers', 'notes', 'mug', 'plant', 'books', 'poster', 'pivot', 'whiteboard', 'mousepad', 'vision',
   ]);
 });
 
 describe('unlockedItemIds', () => {
   it('starts with only the starter item', () => {
-    expect(unlockedItemIds(initialState)).toEqual(['stickers', 'notes']);
+    expect(unlockedItemIds(initialState)).toEqual(['sama-lisa', 'stickers', 'notes']);
   });
 
   it('adds items as progress flags are set', () => {
     const state = { ...initialState, eventId: 'larphacks', standUpSubmitted: true, postPublished: true };
-    expect(unlockedItemIds(state)).toEqual(['stickers', 'poster', 'mug', 'mousepad', 'notes', 'pivot', 'vision', 'whiteboard', 'plant', 'books']);
+    expect(unlockedItemIds(state)).toEqual(['sama-lisa', 'stickers', 'poster', 'mug', 'mousepad', 'notes', 'pivot', 'vision', 'whiteboard', 'plant', 'books']);
   });
 });
 

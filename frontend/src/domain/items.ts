@@ -1,6 +1,6 @@
 import { AssetName } from '../assets/manifest';
 
-export type ItemId = 'stickers' | 'poster' | 'mug' | 'mousepad' | 'whiteboard' | 'plant' | 'books' | 'vision' | 'pivot' | 'notes';
+export type ItemId = 'stickers' | 'sama-lisa' | 'poster' | 'mug' | 'mousepad' | 'whiteboard' | 'plant' | 'books' | 'vision' | 'pivot' | 'notes';
 export type SpotId =
   | 'wall-desk-left'
   | 'wall-desk-right'
@@ -49,6 +49,7 @@ export interface RoomSpot {
 }
 
 export const ITEMS: readonly RoomItem[] = [
+  { id: 'sama-lisa', name: 'Sama Lisa', asset: 'samaLisa', surface: 'wall', width: 0.98, height: 1.4, unlockHint: 'Starter item' },
   { id: 'stickers', name: 'Startup stickers', asset: 'startupStickers', surface: 'wall', width: 1.05, height: 0.7, unlockHint: 'Starter item' },
   { id: 'poster', name: 'Founder poster', asset: 'founderPoster', surface: 'wall', width: 1.4, height: 1.8, unlockHint: 'Select an event' },
   { id: 'mug', name: 'Google mug', asset: 'googleMug', surface: 'desk', width: 0.6, height: 0.4, baseInset: 0.24, unlockHint: 'Log a stand-up' },
@@ -63,7 +64,7 @@ export const ITEMS: readonly RoomItem[] = [
 
 // These are ordering values; each item's actual unlock still depends on its action.
 const UNLOCK_ORDER: Record<ItemId, number> = {
-  stickers: 0, notes: 0,
+  stickers: 0, 'sama-lisa': 0, notes: 0,
   mug: 5, plant: 5, books: 5,
   poster: 20, pivot: 20, whiteboard: 20,
   mousepad: 60, vision: 60,

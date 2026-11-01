@@ -10,7 +10,7 @@ export type AssetName =
   | 'founderPoster'
   | 'googleMug'
   | 'mousepad'
-  | 'miniWhiteboard' | 'deskPlant' | 'startupBooks' | 'visionBoard' | 'pivotSign' | 'stickyNotes';
+  | 'miniWhiteboard' | 'deskPlant' | 'startupBooks' | 'visionBoard' | 'pivotSign' | 'stickyNotes' | 'samaLisa';
 
 export const ASSETS: Record<AssetName, string> = {
   dormBackground: 'assets/dorm-background.jpg',
@@ -30,6 +30,7 @@ export const ASSETS: Record<AssetName, string> = {
   visionBoard: 'assets/room-items/vision-board.svg',
   pivotSign: 'assets/room-items/pivot-sign.svg',
   stickyNotes: 'assets/room-items/sticky-notes.svg',
+  samaLisa: 'assets/room-items/sama-lisa.png',
 };
 
 /**
