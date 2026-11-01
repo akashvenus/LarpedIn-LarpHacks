@@ -10,26 +10,40 @@ function isTypingTarget(target: EventTarget | null): boolean {
   return target instanceof HTMLElement && ['INPUT', 'TEXTAREA', 'SELECT'].includes(target.tagName);
 }
 
+export interface InteractKeyHandlers {
+  onPress: (code: string) => void;
+  onRelease: (code: string) => void;
+}
+
 /** Keyboard and joystick state, read once per frame by the player. */
-export function useMoveInput(onInteractKey: (code: string) => void) {
+export function useMoveInput(handlers: InteractKeyHandlers) {
   const keysRef = useRef(new Set<string>());
   const stickRef = useRef({ x: 0, y: 0 });
-  const interactRef = useRef(onInteractKey);
-  interactRef.current = onInteractKey;
+  const handlersRef = useRef(handlers);
+  handlersRef.current = handlers;
 
   useEffect(() => {
     const keys = keysRef.current;
     const handleDown = (event: KeyboardEvent) => {
       if (isTypingTarget(event.target)) return;
+      keys.add(event.code);
       if (MOVE_KEYS.has(event.code)) {
-        keys.add(event.code);
         event.preventDefault();
       } else if (!event.repeat) {
-        interactRef.current(event.code);
+        handlersRef.current.onPress(event.code);
       }
     };
-    const handleUp = (event: KeyboardEvent) => keys.delete(event.code);
-    const handleBlur = () => keys.clear();
+    const handleUp = (event: KeyboardEvent) => {
+      keys.delete(event.code);
+      if (!MOVE_KEYS.has(event.code)) handlersRef.current.onRelease(event.code);
+    };
+    // A key released while the window is unfocused never fires keyup.
+    const handleBlur = () => {
+      keys.forEach((code) => {
+        if (!MOVE_KEYS.has(code)) handlersRef.current.onRelease(code);
+      });
+      keys.clear();
+    };
 
     window.addEventListener('keydown', handleDown);
     window.addEventListener('keyup', handleUp);

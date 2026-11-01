@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { ASSETS, AVATAR_ITEMS } from '../assets/manifest';
+import { AVATAR_ITEMS } from '../assets/manifest';
 import { ItemId, SpotId } from '../domain/items';
 import { InventoryPanel } from './InventoryPanel';
 import { DormScene } from './room/DormScene';
@@ -70,8 +70,7 @@ export function Dorm({
       </header>
 
       <DormScene
-        avatarAsset={avatarEntry?.asset ?? ASSETS.avatar}
-        avatarScale={avatarEntry?.scale ?? 1}
+        avatar={avatarEntry ?? AVATAR_ITEMS[0]}
         lightsPlaced={roomItems.includes('rgb-lights')}
         unlockedItemIds={unlockedItemIds}
         placements={placements}

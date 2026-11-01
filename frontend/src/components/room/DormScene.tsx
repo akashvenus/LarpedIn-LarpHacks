@@ -30,7 +30,8 @@ class SceneBoundary extends Component<{ fallback: ReactNode; children: ReactNode
   }
 }
 
-function FlatDorm({ avatarAsset, avatarScale, lightsPlaced }: Pick<DormRoom3DProps, 'avatarAsset' | 'avatarScale' | 'lightsPlaced'>) {
+function FlatDorm({ avatar, lightsPlaced }: Pick<DormRoom3DProps, 'avatar' | 'lightsPlaced'>) {
+  const scale = avatar.scale ?? 1;
   return (
     <div className="dorm-flat" aria-label="Your dorm room">
       <img className="dorm-bg" src={ASSETS.dormBackground} alt="" />
@@ -43,8 +44,8 @@ function FlatDorm({ avatarAsset, avatarScale, lightsPlaced }: Pick<DormRoom3DPro
         <div className="dorm-slot slot-avatar">
           <img
             className="item"
-            src={avatarAsset}
-            style={avatarScale !== 1 ? { transform: `scale(${avatarScale})` } : undefined}
+            src={avatar.asset}
+            style={scale !== 1 ? { transform: `scale(${scale})` } : undefined}
             alt="You, in the dorm"
           />
         </div>
@@ -56,7 +57,7 @@ function FlatDorm({ avatarAsset, avatarScale, lightsPlaced }: Pick<DormRoom3DPro
 /** Dorm panel: the lazy walkable room, or the flat photo scene when it cannot run. Children overlay either one. */
 export function DormScene({ children, ...props }: DormRoom3DProps & { children?: ReactNode }) {
   const [canUse3D] = useState(supportsWebGL);
-  const flat = <FlatDorm avatarAsset={props.avatarAsset} avatarScale={props.avatarScale} lightsPlaced={props.lightsPlaced} />;
+  const flat = <FlatDorm avatar={props.avatar} lightsPlaced={props.lightsPlaced} />;
 
   return (
     <div className="dorm-scene">

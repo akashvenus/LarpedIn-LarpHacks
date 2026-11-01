@@ -1,21 +1,20 @@
 import { useTexture } from '@react-three/drei';
 import { Canvas } from '@react-three/fiber';
-import { useState } from 'react';
-import { ASSETS, AVATAR_ITEMS } from '../../assets/manifest';
+import { CSSProperties, MouseEvent, useState } from 'react';
+import { ASSETS, AvatarItem } from '../../assets/manifest';
 import { findItem, ItemId, SpotId } from '../../domain/items';
 import { ItemBoxPanel } from './ItemBoxPanel';
 import { Joystick } from './Joystick';
 import { PlacedItems } from './PlacedItems';
 import { Player } from './Player';
 import { RgbLights, RoomShell } from './RoomShell';
+import { useHoldAction } from './useHoldAction';
 import { useDragYaw, useMoveInput } from './useRoomControls';
 
-// Switching looks in the inventory must not suspend the canvas and flash the fallback.
-AVATAR_ITEMS.forEach((item) => useTexture.preload(item.asset));
+const BOX_HOLD_MS = 700;
 
 export interface DormRoom3DProps {
-  avatarAsset: string;
-  avatarScale: number;
+  avatar: AvatarItem;
   lightsPlaced: boolean;
   unlockedItemIds: ItemId[];
   placements: Partial<Record<SpotId, ItemId>>;
@@ -25,8 +24,7 @@ export interface DormRoom3DProps {
 
 /** Walkable dorm: the 3D scene plus its on-screen controls. */
 export default function DormRoom3D({
-  avatarAsset,
-  avatarScale,
+  avatar,
   lightsPlaced,
   unlockedItemIds,
   placements,
@@ -38,15 +36,30 @@ export default function DormRoom3D({
   const [carryingId, setCarryingId] = useState<ItemId | null>(null);
   const { yawRef, onPointerDown } = useDragYaw(0);
 
-  const { readInput, setStick } = useMoveInput((code) => {
-    if (code === 'KeyE' && isNearBox) setIsBoxOpen((open) => !open);
-    if (code === 'Escape') {
-      setIsBoxOpen(false);
-      setCarryingId(null);
-    }
+  const carried = carryingId ? findItem(carryingId) : undefined;
+  const canOpenBox = isNearBox && !isBoxOpen && !carried;
+  const { isHolding, startHold, endHold } = useHoldAction(BOX_HOLD_MS, canOpenBox, () => setIsBoxOpen(true));
+
+  const { readInput, setStick } = useMoveInput({
+    onPress: (code) => {
+      if (code === 'KeyE') {
+        if (isBoxOpen) setIsBoxOpen(false);
+        else if (canOpenBox) startHold();
+      }
+      if (code === 'Escape') {
+        setIsBoxOpen(false);
+        setCarryingId(null);
+      }
+    },
+    onRelease: (code) => {
+      if (code === 'KeyE') endHold();
+    },
   });
 
-  const carried = carryingId ? findItem(carryingId) : undefined;
+  // detail is 0 only for keyboard activation, which has no way to hold a pointer.
+  const handleBoxButtonClick = (event: MouseEvent) => {
+    if (event.detail === 0) setIsBoxOpen(true);
+  };
 
   const handlePick = (itemId: ItemId) => {
     const item = findItem(itemId);
@@ -87,8 +100,7 @@ export default function DormRoom3D({
             onPickUp={handlePickUp}
           />
           <Player
-            avatarAsset={avatarAsset}
-            avatarScale={avatarScale}
+            avatar={avatar}
             isFrozen={isBoxOpen}
             readInput={readInput}
             yawRef={yawRef}
@@ -111,9 +123,21 @@ export default function DormRoom3D({
 
       {!isBoxOpen && <Joystick onChange={setStick} />}
 
-      {isNearBox && !isBoxOpen && !carried && (
-        <button className="btn btn-primary room-action" onClick={() => setIsBoxOpen(true)}>
-          📦 Open box
+      {canOpenBox && (
+        <button
+          className={`btn btn-primary room-action${isHolding ? ' is-holding' : ''}`}
+          style={{ '--hold-ms': `${BOX_HOLD_MS}ms` } as CSSProperties}
+          onPointerDown={startHold}
+          onPointerUp={endHold}
+          onPointerLeave={endHold}
+          onPointerCancel={endHold}
+          onContextMenu={(event) => event.preventDefault()}
+          onClick={handleBoxButtonClick}
+        >
+          <span className="room-action-fill" aria-hidden="true" />
+          <span className="room-action-label">
+            <kbd className="room-action-key">E</kbd> Hold to open box
+          </span>
         </button>
       )}
 
