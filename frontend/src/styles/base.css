@@ -295,21 +295,55 @@ h2 {
 
 /* ---------- Dorm ---------- */
 
+.dorm-header {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.dorm-header h1 {
+  margin: 0;
+}
+
+.dorm-header .xp-wrap {
+  padding: 10px 12px;
+}
+
+/* Height leaves room for the header, button row and dock on a phone without scrolling. */
 .dorm-scene {
   position: relative;
+  flex: none;
+  height: clamp(320px, calc(100dvh - 300px), 620px);
   border-radius: var(--radius);
   overflow: hidden;
   border: 1px solid var(--line);
-  aspect-ratio: 3 / 2;
   background: var(--surface);
 }
 
-.dorm-scene .dorm-bg {
+.dorm-standup[hidden] {
+  display: none;
+}
+
+.dorm-flat {
+  position: absolute;
+  inset: 0;
+}
+
+.dorm-flat .dorm-bg {
   position: absolute;
   inset: 0;
   width: 100%;
   height: 100%;
   object-fit: cover;
+}
+
+/* Keeps the slot percentages tied to a 3:2 box at the bottom of the panel. */
+.dorm-flat-items {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  aspect-ratio: 3 / 2;
 }
 
 /* Fixed cosmetic slots — see docs: placeables use fixed slots at phone width. */

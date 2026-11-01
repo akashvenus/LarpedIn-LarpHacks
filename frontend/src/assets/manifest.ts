@@ -5,7 +5,11 @@ export type AssetName =
   | 'mic'
   | 'rgbLights'
   | 'giftClosed'
-  | 'giftOpen';
+  | 'giftOpen'
+  | 'startupStickers'
+  | 'founderPoster'
+  | 'googleMug'
+  | 'mousepad';
 
 export const ASSETS: Record<AssetName, string> = {
   dormBackground: 'assets/dorm-background.jpg',
@@ -15,6 +19,10 @@ export const ASSETS: Record<AssetName, string> = {
   rgbLights: 'assets/rgb-lights.png',
   giftClosed: 'assets/gift-closed.svg',
   giftOpen: 'assets/gift-open.svg',
+  startupStickers: 'assets/startup-stickers.png',
+  founderPoster: 'assets/sam-altman-poster.png',
+  googleMug: 'assets/google-mug.png',
+  mousepad: 'assets/mousepad.png',
 };
 
 /**
@@ -22,8 +30,8 @@ export const ASSETS: Record<AssetName, string> = {
  * - AVATAR_ITEMS: full-body avatar variants; the dorm renders the selected
  *   one. `scale` visually matches art whose frame padding differs (the
  *   square hoodie frames have padding the portrait frames don't).
- * - ROOM_ITEMS: static decor, placed/removed via the inventory; each maps
- *   to a fixed CSS slot over the dorm backdrop (see base.css).
+ * - ROOM_ITEMS: decor toggled from the inventory. Decor placed by hand comes
+ *   from the box in the room instead (see domain/items.ts).
  */
 export interface AvatarItem {
   id: string;
@@ -51,8 +59,4 @@ export const AVATAR_ITEMS: AvatarItem[] = [
 
 export const ROOM_ITEMS: RoomItem[] = [
   { id: 'rgb-lights', name: 'RGB light bar', asset: 'assets/rgb-lights.png', slot: 'slot-lights' },
-  { id: 'sam-poster', name: 'Sam Altman poster', asset: 'assets/sam-altman-poster.png', slot: 'slot-poster' },
-  { id: 'stickers', name: 'Startup stickers', asset: 'assets/startup-stickers.png', slot: 'slot-stickers' },
-  { id: 'mug', name: 'Google mug', asset: 'assets/google-mug.png', slot: 'slot-mug' },
-  { id: 'mousepad', name: 'Blob mousepad', asset: 'assets/mousepad.png', slot: 'slot-mousepad' },
 ];

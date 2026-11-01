@@ -1,0 +1,140 @@
+/* Walkable dorm panel and its controls. */
+
+.room-3d,
+.room-canvas {
+  position: absolute;
+  inset: 0;
+}
+
+.room-canvas {
+  touch-action: none;
+  cursor: grab;
+}
+
+.room-canvas:active {
+  cursor: grabbing;
+}
+
+.room-joystick {
+  position: absolute;
+  left: 12px;
+  bottom: 12px;
+  width: 92px;
+  height: 92px;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  background: rgba(20, 18, 43, 0.28);
+  border: 2px solid rgba(255, 255, 255, 0.55);
+  touch-action: none;
+  user-select: none;
+  -webkit-user-select: none;
+  cursor: pointer;
+}
+
+.room-joystick-knob {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.92);
+  box-shadow: 0 2px 8px rgba(20, 18, 43, 0.4);
+  pointer-events: none;
+}
+
+.room-action {
+  position: absolute;
+  right: 12px;
+  bottom: 12px;
+  animation: drop-in 0.25s ease both;
+}
+
+.room-banner {
+  position: absolute;
+  top: 10px;
+  left: 10px;
+  right: 62px; /* clears the briefcase button */
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 8px 12px;
+  border-radius: 12px;
+  background: rgba(20, 18, 43, 0.88);
+  font-size: 13px;
+}
+
+.room-banner-cancel {
+  flex: none;
+  min-height: 32px;
+  padding: 0 10px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--surface-2);
+  color: var(--text);
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.room-box {
+  position: absolute;
+  z-index: 6; /* above the briefcase button */
+  inset: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 12px;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: rgba(30, 27, 58, 0.97);
+  overflow-y: auto;
+}
+
+.room-box-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.room-box-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+
+.room-box-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  padding: 8px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--surface-2);
+  color: var(--text);
+  font: inherit;
+  font-size: 12px;
+  text-align: center;
+  cursor: pointer;
+  transition: border-color 0.15s ease, transform 0.15s ease;
+}
+
+.room-box-item:hover:not(:disabled),
+.room-box-item:focus-visible {
+  border-color: var(--gold);
+  transform: translateY(-1px);
+}
+
+.room-box-item img {
+  width: 100%;
+  height: 58px;
+  object-fit: contain;
+}
+
+.room-box-item.locked {
+  cursor: not-allowed;
+}
+
+.room-box-item.locked img {
+  filter: grayscale(1) brightness(0.45);
+}

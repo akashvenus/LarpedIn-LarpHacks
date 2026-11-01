@@ -63,7 +63,7 @@ export function InventoryPanel({
 
         <section>
           <h3 className="inv-title">
-            Dorm items <span className="muted">· tap to place or remove</span>
+            Dorm items <span className="muted">· more in the box in your room</span>
           </h3>
           <div className="room-item-grid">
             {ROOM_ITEMS.map((item) => {

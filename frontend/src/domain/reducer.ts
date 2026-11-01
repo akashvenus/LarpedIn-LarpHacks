@@ -1,3 +1,5 @@
+import { findItem, findSpot } from './items';
+import { unlockedItemIds } from './selectors';
 import {
   DemoAction,
   DemoState,
@@ -145,6 +147,25 @@ export function demoReducer(state: DemoState, action: DemoAction): DemoState {
       // One callback: mark the gift open and send the simulated message.
       if (state.giftOpened) return state;
       return { ...state, giftOpened: true, outreachSent: true };
+
+    case 'PLACE_ITEM': {
+      const item = findItem(action.itemId);
+      const spot = findSpot(action.spotId);
+      if (!item || !spot || item.surface !== spot.surface) return state;
+      if (!unlockedItemIds(state).includes(item.id)) return state;
+      if (state.placements[spot.id] === item.id) return state;
+      const others = Object.entries(state.placements).filter(([, id]) => id !== item.id);
+      return {
+        ...state,
+        placements: { ...Object.fromEntries(others), [spot.id]: item.id },
+      };
+    }
+
+    case 'REMOVE_ITEM': {
+      if (!state.placements[action.spotId]) return state;
+      const remaining = Object.entries(state.placements).filter(([id]) => id !== action.spotId);
+      return { ...state, placements: Object.fromEntries(remaining) };
+    }
 
     case 'SET_AVATAR_ITEM':
       if (state.avatarItem === action.itemId) return state;
