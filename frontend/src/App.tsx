@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useReducer, useRef, useState, type ReactNode } from 'react';
-import { ArrowLeft, Mail } from 'lucide-react';
+import { ArrowLeft, Mail, RotateCcw } from 'lucide-react';
 import {
   compose,
   fetchAiPreset,
@@ -11,6 +11,7 @@ import {
   saveDemoState,
   saveBrowserPost,
   deleteUserPost,
+  resetBrowserData,
   fetchStandUps, publishStandUp, deleteStandUp, updateStandUp,
 } from './api';
 import { CameraGuide } from './components/CameraGuide';
@@ -67,8 +68,11 @@ export default function App() {
   const [standUpsReady, setStandUpsReady] = useState(false);
   const [standUpError, setStandUpError] = useState<string | null>(null);
   const [standUpBusy, setStandUpBusy] = useState(false);
+  const [resetBusy, setResetBusy] = useState(false);
+  const [resetError, setResetError] = useState<string | null>(null);
   const [today, setToday] = useState(() => localDay());
   const standUpOperation = useRef(false);
+  const resetOperation = useRef(false);
   const [saving, setSaving] = useState(false);
   const [loadAttempt, setLoadAttempt] = useState(0);
   const clientId = useRef<string | null>(null);
@@ -187,7 +191,7 @@ export default function App() {
   }, [loadAttempt]);
 
   useEffect(() => {
-    if (!stateLoaded || postOperation.current) return;
+    if (!stateLoaded || postOperation.current || resetOperation.current) return;
     if (isLocalDemo) {
       try {
         saveLocalDemo(window.localStorage, state);
@@ -201,7 +205,7 @@ export default function App() {
     const snapshot = state;
     setSaving(true);
     const timer = window.setTimeout(() => {
-      if (postOperation.current) return;
+      if (postOperation.current || resetOperation.current) return;
       saveQueue.current = saveQueue.current
         .then(() => saveDemoState(clientId.current!, snapshot))
         .then(() => {
@@ -384,6 +388,30 @@ export default function App() {
     }
   };
 
+  const handleResetDemo = async () => {
+    if (resetOperation.current || postOperation.current || standUpOperation.current) return;
+    const confirmed = window.confirm('Restart your demo? This deletes this browser’s progress, photos, event post, and Stand-Ups. Other people’s data will stay.');
+    if (!confirmed) return;
+    resetOperation.current = true;
+    setResetBusy(true);
+    setResetError(null);
+    try {
+      await saveQueue.current;
+      if (isLocalDemo) {
+        window.localStorage.removeItem('larpedin-local-demo-state');
+        window.localStorage.removeItem(LOCAL_STAND_UPS_KEY);
+      } else {
+        if (!clientId.current) throw new Error('This browser could not be identified.');
+        await resetBrowserData(clientId.current);
+      }
+      window.location.reload();
+    } catch (err) {
+      resetOperation.current = false;
+      setResetBusy(false);
+      setResetError(err instanceof Error ? err.message : 'Could not restart the demo. Try again.');
+    }
+  };
+
   const handleStandUp = async (win: string, nextStep: string) => {
     if (standUpOperation.current || postOperation.current || !standUpsReady || hasStandUpToday(standUps) || !(win.trim() || nextStep.trim())) return;
     standUpOperation.current = true;
@@ -473,12 +501,19 @@ export default function App() {
           {isLocalDemo ? saveError : `Progress could not be saved to the database: ${saveError}`}
         </div>
       )}
+      {resetError && <div role="alert" className="persistence-error">{resetError}</div>}
       {!saveError && saving && <div className="persistence-status" role="status" aria-label="Saving progress"><span aria-hidden="true" /></div>}
       <XpHeader xp={xp} showProgress={screen !== 'social'} action={
-        screen === 'social' || screen === 'inbox' ? <button type="button" className={`icon-btn social-mail${screen === 'social' ? ' message-button' : ''}`}
-          aria-label={screen === 'inbox' ? 'Back to feed' : 'Open inbox'} onClick={() => navigate(screen === 'inbox' ? 'social' : 'inbox')}>
-          {screen === 'inbox' ? <FeedIcon /> : <Mail size={20} className="nav-arrow" aria-hidden="true" />}
-        </button> : undefined
+        <div className="app-header-actions">
+          {(screen === 'social' || screen === 'inbox') && <button type="button" className={`icon-btn social-mail${screen === 'social' ? ' message-button' : ''}`}
+            aria-label={screen === 'inbox' ? 'Back to feed' : 'Open inbox'} onClick={() => navigate(screen === 'inbox' ? 'social' : 'inbox')}>
+            {screen === 'inbox' ? <FeedIcon /> : <Mail size={20} className="nav-arrow" aria-hidden="true" />}
+          </button>}
+          <button type="button" className="icon-btn reset-demo-button" aria-label="Restart demo" title="Restart demo"
+            onClick={() => void handleResetDemo()} disabled={resetBusy || postBusy || standUpBusy}>
+            <RotateCcw size={15} aria-hidden="true" /> <span>{resetBusy ? 'Resetting…' : 'Reset'}</span>
+          </button>
+        </div>
       } />
       {screen === 'dorm' && (
         <Dorm

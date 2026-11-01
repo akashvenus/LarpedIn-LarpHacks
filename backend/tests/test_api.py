@@ -468,6 +468,20 @@ def test_browser_posts_are_isolated_and_remain_compatible_with_ip_routes(monkeyp
     assert client.delete('/api/user-post/not-a-uuid').status_code == 422
 
 
+def test_demo_reset_targets_only_the_requested_browser(monkeypatch):
+    from app import main
+    cleared = []
+    monkeypatch.setattr(main, 'reset_browser_data', lambda client_id: cleared.append(str(client_id)))
+    browser_id = '11111111-1111-4111-8111-111111111111'
+
+    response = client.delete(f'/api/demo-data/{browser_id}')
+
+    assert response.status_code == 204
+    assert cleared == [browser_id]
+    assert client.delete('/api/demo-data/not-a-uuid').status_code == 422
+    assert cleared == [browser_id]
+
+
 def test_shared_feed_can_exclude_the_current_browser(monkeypatch):
     from app import main
     captured = {}

@@ -404,3 +404,19 @@ def delete_browser_post(client_id):
             )
     except psycopg.Error as error:
         raise DatabaseUnavailable("Could not delete post") from error
+
+
+def reset_browser_data(client_id):
+    try:
+        with _connect() as conn:
+            conn.execute(CREATE_DEMO_STATES_TABLE)
+            conn.execute(CREATE_USER_POSTS)
+            conn.execute(CREATE_TABLE)
+            conn.execute("ALTER TABLE posts ADD COLUMN IF NOT EXISTS author_client_id UUID")
+            conn.execute(CREATE_STAND_UPS_TABLE)
+            conn.execute("DELETE FROM posts WHERE author_client_id = %s", (client_id,))
+            conn.execute("DELETE FROM user_posts WHERE client_id = %s", (client_id,))
+            conn.execute("DELETE FROM stand_up_posts WHERE client_id = %s", (client_id,))
+            conn.execute("DELETE FROM demo_states WHERE client_id = %s", (client_id,))
+    except psycopg.Error as error:
+        raise DatabaseUnavailable("Could not reset demo progress") from error
