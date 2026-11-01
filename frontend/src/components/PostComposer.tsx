@@ -3,29 +3,14 @@ import { ComposerInput, DemoEvent, Option } from '../domain/types';
 
 export interface PostComposerProps {
   event: DemoEvent;
-  options: {
-    hooks: Option[];
-    learnings: Option[];
-    conclusions: Option[];
-    hashtags: Option[];
-  };
-  /** Calls POST /api/compose; resolves with the assembled text. */
+  options: { hooks: Option[]; learnings: Option[]; conclusions: Option[]; hashtags: Option[] };
   onCompose: (input: ComposerInput) => Promise<string>;
-  /** Fired once the post is composed — the LinkedIn mockup takes over
-   *  as the publish surface (draft post + Post button). */
   onComposed: (text: string) => void;
 }
 
 type Phase = 'choose' | 'composing';
+type ActiveSlot = 'hook' | 'learning' | 'conclusion' | 'hashtags';
 
-/**
- * MadLibs post composer (F3). Order per UX review: 1) the selected
- * event (shown, not just data), 2) hook, 3) exactly three distinct
- * learnings, 4) conclusion, 5) 1–3 hashtags. "AI take the wheel"
- * prefills a deterministic curated preset. No typing required; there is
- * no editable field — the composed post is previewed and published in
- * the LinkedIn mockup.
- */
 export function PostComposer({ event, options, onCompose, onComposed }: PostComposerProps) {
   const [hookId, setHookId] = useState<string | null>(null);
   const [learningIds, setLearningIds] = useState<string[]>([]);
@@ -33,6 +18,7 @@ export function PostComposer({ event, options, onCompose, onComposed }: PostComp
   const [hashtagIds, setHashtagIds] = useState<string[]>([]);
   const [phase, setPhase] = useState<Phase>('choose');
   const [error, setError] = useState<string | null>(null);
+  const [activeSlot, setActiveSlot] = useState<ActiveSlot>('hook');
 
   const readyToCompose =
     hookId !== null && learningIds.length === 3 && conclusionId !== null && hashtagIds.length >= 1;
@@ -49,7 +35,7 @@ export function PostComposer({ event, options, onCompose, onComposed }: PostComp
     );
   };
 
-  /** Deterministic curated preset — no live model call. */
+  /** Deterministic curated preset, no live model call. */
   const aiTakeTheWheel = () => {
     if (options.hooks.length === 0 || options.learnings.length < 3) return;
     setHookId(options.hooks[0].id);
@@ -78,100 +64,126 @@ export function PostComposer({ event, options, onCompose, onComposed }: PostComp
     }
   };
 
+  const learningText = learningIds.map(
+    (id) => options.learnings.find((option) => option.id === id)?.text ?? '',
+  );
+  const hashtagText = hashtagIds
+    .map((id) => options.hashtags.find((option) => option.id === id)?.text)
+    .filter(Boolean)
+    .join(', ');
+  // The worksheet template supplies its own punctuation, so drop any
+  // trailing period/!/? carried by the option copy to avoid "47.."
+  const renderSentence = (text: string) => text.replace(/[.!?]+$/, '');
+
+  const hookText = renderSentence(options.hooks.find((option) => option.id === hookId)?.text ?? '');
+  const conclusionText = renderSentence(
+    options.conclusions.find((option) => option.id === conclusionId)?.text ?? '',
+  );
+
+  const renderBlank = (slot: ActiveSlot, label: string, value: string, ariaLabel: string) => (
+    <button
+      type="button"
+      className={`blank${activeSlot === slot ? ' active' : ''}`}
+      onClick={() => setActiveSlot(slot)}
+      aria-label={ariaLabel}
+    >
+      <span className="blank-value">{value}</span>
+      <span className="blank-label">{label}</span>
+    </button>
+  );
+
+  const choiceTitle =
+    activeSlot === 'hook'
+      ? '① Choose your hook'
+      : activeSlot === 'learning'
+        ? '②–④ Pick three learnings'
+        : activeSlot === 'conclusion'
+          ? '⑤ Choose a conclusion'
+          : '⑥ Pick hashtags';
+
   return (
     <div className="composer">
-      <section className="card">
-        <h3>1 · Your event</h3>
-        <div className={`event-pick${event.featured ? ' featured' : ''}`}>
-          <div className="event-title-row">
-            <strong>{event.title}</strong>
-            {event.featured && <span className="pill pill-featured">Featured</span>}
+      <div className={`event-pick worksheet-event${event.featured ? ' featured' : ''}`}>
+        {event.featured && <span className="pill pill-featured">Featured</span>}
+        <strong>{event.title}</strong>
+        <span className="event-meta">{event.dateLabel} · {event.venueLabel}</span>
+      </div>
+
+      <section className="worksheet-card">
+        <div className="worksheet-caption">LarpedIn · Career Story Worksheet</div>
+        <p className="worksheet">
+          At <span className="given">{event.title}</span>,{' '}
+          {renderBlank('hook', '① HOOK', hookText, 'Choose your hook')}. By the end of the night, I&apos;d learned that{' '}
+          {renderBlank('learning', '② LEARNING', learningText[0] ?? '', 'Choose learning one')},{' '}
+          {renderBlank('learning', '③ LEARNING', learningText[1] ?? '', 'Choose learning two')}, and{' '}
+          {renderBlank('learning', '④ LEARNING', learningText[2] ?? '', 'Choose learning three')}.{' '}
+          {renderBlank('conclusion', '⑤ CONCLUSION', conclusionText, 'Choose your conclusion')}{' '}
+          {renderBlank('hashtags', '⑥ HASHTAGS', hashtagText, 'Choose your hashtags')}
+        </p>
+      </section>
+
+      <section className="card worksheet-choice-panel">
+        <h3>
+          {choiceTitle}{' '}
+          {activeSlot === 'learning' && <span className="muted">({learningIds.length}/3)</span>}
+          {activeSlot === 'hashtags' && <span className="muted">(1–3)</span>}
+        </h3>
+        {activeSlot === 'hook' && (
+          <div className="choice-list">
+            {options.hooks.map((h) => (
+              <button type="button" key={h.id} className={`choice${hookId === h.id ? ' on' : ''}`} onClick={() => setHookId(h.id)}>
+                “{h.text}”
+              </button>
+            ))}
           </div>
-          <p className="event-meta" style={{ margin: '4px 0 0' }}>
-            {event.dateLabel} · {event.venueLabel} · selected in Suggested events
-          </p>
-        </div>
-      </section>
-
-      <section className="card">
-        <h3>2 · Pick your hook</h3>
-        <div className="choice-list">
-          {options.hooks.map((h) => (
-            <button
-              key={h.id}
-              className={`choice${hookId === h.id ? ' on' : ''}`}
-              onClick={() => setHookId(h.id)}
-            >
-              “{h.text}”
-            </button>
-          ))}
-        </div>
-      </section>
-
-      <section className="card">
-        <h3>
-          3 · Three things you learned <span className="muted">({learningIds.length}/3)</span>
-        </h3>
-        <div className="choice-list">
-          {options.learnings.map((l) => (
-            <button
-              key={l.id}
-              className={`choice${learningIds.includes(l.id) ? ' on' : ''}`}
-              onClick={() => toggleLearning(l.id)}
-              disabled={!learningIds.includes(l.id) && learningIds.length >= 3}
-            >
-              {l.text}
-            </button>
-          ))}
-        </div>
-      </section>
-
-      <section className="card">
-        <h3>4 · Land the conclusion</h3>
-        <div className="choice-list">
-          {options.conclusions.map((c) => (
-            <button
-              key={c.id}
-              className={`choice${conclusionId === c.id ? ' on' : ''}`}
-              onClick={() => setConclusionId(c.id)}
-            >
-              {c.text}
-            </button>
-          ))}
-        </div>
-      </section>
-
-      <section className="card">
-        <h3>
-          5 · Hashtags <span className="muted">(1–3)</span>
-        </h3>
-        <div className="chip-row">
-          {options.hashtags.map((t) => (
-            <button
-              key={t.id}
-              className={`chip${hashtagIds.includes(t.id) ? ' on' : ''}`}
-              onClick={() => toggleHashtag(t.id)}
-              disabled={!hashtagIds.includes(t.id) && hashtagIds.length >= 3}
-            >
-              {t.text}
-            </button>
-          ))}
-        </div>
+        )}
+        {activeSlot === 'learning' && (
+          <div className="choice-list">
+            {options.learnings.map((l) => (
+              <button
+                type="button"
+                key={l.id}
+                className={`choice${learningIds.includes(l.id) ? ' on' : ''}`}
+                onClick={() => toggleLearning(l.id)}
+                disabled={!learningIds.includes(l.id) && learningIds.length >= 3}
+              >
+                {l.text}
+              </button>
+            ))}
+          </div>
+        )}
+        {activeSlot === 'conclusion' && (
+          <div className="choice-list">
+            {options.conclusions.map((c) => (
+              <button type="button" key={c.id} className={`choice${conclusionId === c.id ? ' on' : ''}`} onClick={() => setConclusionId(c.id)}>
+                {c.text}
+              </button>
+            ))}
+          </div>
+        )}
+        {activeSlot === 'hashtags' && (
+          <div className="chip-row">
+            {options.hashtags.map((t) => (
+              <button
+                type="button"
+                key={t.id}
+                className={`chip${hashtagIds.includes(t.id) ? ' on' : ''}`}
+                onClick={() => toggleHashtag(t.id)}
+                disabled={!hashtagIds.includes(t.id) && hashtagIds.length >= 3}
+              >
+                {t.text}
+              </button>
+            ))}
+          </div>
+        )}
+        <p className="worksheet-helper">Tap a blank on the worksheet to switch what you&apos;re filling.</p>
       </section>
 
       <div className="composer-actions">
-        <button
-          className="btn btn-ghost"
-          onClick={aiTakeTheWheel}
-          disabled={phase === 'composing'}
-        >
+        <button type="button" className="btn btn-ghost" onClick={aiTakeTheWheel} disabled={phase === 'composing'}>
           ✨ AI take the wheel
         </button>
-        <button
-          className="btn btn-primary"
-          onClick={() => void handleCompose()}
-          disabled={!readyToCompose || phase === 'composing'}
-        >
+        <button type="button" className="btn btn-primary" onClick={() => void handleCompose()} disabled={!readyToCompose || phase === 'composing'}>
           {phase === 'composing' ? 'Composing…' : 'Compose post'}
         </button>
       </div>
