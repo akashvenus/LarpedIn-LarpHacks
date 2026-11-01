@@ -1,1 +1,27 @@
-*.pyc
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Frontend
+node_modules/
+dist/
+*.tsbuildinfo
+coverage/
+
+# Secrets
+.env
+.env.*
+!.env.example
+
+# Logs
+*.log
+
+# OS and editor
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
