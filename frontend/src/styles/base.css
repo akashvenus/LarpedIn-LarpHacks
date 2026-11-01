@@ -177,7 +177,7 @@ h2 {
   backdrop-filter: blur(14px);
   border-top: 1px solid var(--line);
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
+  grid-template-columns: repeat(5, 1fr);
   gap: 6px;
   z-index: 20;
 }
@@ -873,4 +873,20 @@ h2 {
 @media (max-width: 374px) {
   .slot-poster { width: 12%; }
   .slot-mug { width: 10%; }
+}
+
+.brand-logo {
+  font-family: Arial, Helvetica, sans-serif;
+  font-weight: 700;
+  letter-spacing: -0.055em;
+}
+.brand-logo span {
+  display: inline-block;
+  margin-left: 2px;
+  padding: 0 4px 2px;
+  border-radius: 4px;
+  background: #0a66c2;
+  color: #fff;
+  letter-spacing: -0.06em;
+  line-height: 1.05;
 }

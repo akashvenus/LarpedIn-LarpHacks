@@ -7,7 +7,17 @@ from fastapi.staticfiles import StaticFiles
 
 from .compose import compose_post
 from .content import CONCLUSIONS, DEMO, EVENTS, HASHTAGS, HOOKS, LEARNINGS
-from .models import ComposeRequest, ComposeResponse
+from .db import DatabaseUnavailable, check_db, list_posts, save_post
+from .gemini import generate_preset
+from .models import (
+    AiPresetRequest,
+    AiPresetResponse,
+    ComposeRequest,
+    ComposeResponse,
+    DbHealthResponse,
+    PostListResponse,
+    PostResponse,
+)
 
 DIST = Path(__file__).resolve().parents[2] / "frontend" / "dist"
 
@@ -36,20 +46,64 @@ def demo():
     return DEMO
 
 
-@app.post("/api/compose", response_model=ComposeResponse)
-def compose(request: ComposeRequest):
+def compose_from_request(request):
     if len(request.learningIds) != 3 or len(set(request.learningIds)) != 3:
         raise HTTPException(status_code=422, detail="Choose exactly 3 different learnings")
     if not 1 <= len(request.hashtagIds) <= 3 or len(set(request.hashtagIds)) != len(request.hashtagIds):
         raise HTTPException(status_code=422, detail="Choose 1 to 3 different hashtags")
-    text = compose_post(
+    return compose_post(
         pick(EVENTS, request.eventId, "eventId"),
         pick(HOOKS, request.hookId, "hookId"),
         [pick(LEARNINGS, item_id, "learningId") for item_id in request.learningIds],
         pick(CONCLUSIONS, request.conclusionId, "conclusionId"),
         [pick(HASHTAGS, item_id, "hashtagId") for item_id in request.hashtagIds],
     )
-    return {"text": text}
+
+
+@app.post("/api/compose", response_model=ComposeResponse)
+def compose(request: ComposeRequest):
+    return {"text": compose_from_request(request)}
+
+
+@app.post("/api/ai/preset", response_model=AiPresetResponse)
+def ai_preset(request: AiPresetRequest):
+    event = pick(EVENTS, request.eventId, "eventId")
+    return generate_preset(event)
+
+
+@app.post("/api/posts", response_model=PostResponse, status_code=201)
+def create_post(request: ComposeRequest):
+    text = compose_from_request(request)
+    try:
+        return save_post(
+            request.eventId,
+            request.hookId,
+            request.learningIds,
+            request.conclusionId,
+            request.hashtagIds,
+            text,
+        )
+    except DatabaseUnavailable:
+        raise HTTPException(status_code=503, detail="Database unavailable")
+
+
+@app.get("/api/posts", response_model=PostListResponse)
+def get_posts(limit: int = 20):
+    if not 1 <= limit <= 50:
+        raise HTTPException(status_code=422, detail="limit must be between 1 and 50")
+    try:
+        return {"posts": list_posts(limit)}
+    except DatabaseUnavailable:
+        raise HTTPException(status_code=503, detail="Database unavailable")
+
+
+@app.get("/api/db/health", response_model=DbHealthResponse)
+def db_health():
+    try:
+        check_db()
+    except DatabaseUnavailable:
+        raise HTTPException(status_code=503, detail="Database unavailable")
+    return {"ok": True}
 
 
 if (DIST / "assets").is_dir():

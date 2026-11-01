@@ -32,8 +32,8 @@ export function Dorm({
   onToggleRoomItem,
 }: DormProps) {
   const [inventoryOpen, setInventoryOpen] = useState(false);
-  const [bullet1, setBullet1] = useState('');
-  const [bullet2, setBullet2] = useState('');
+  const [standUp, setStandUp] = useState('');
+  const bullets = standUp.split('\n').map((line) => line.replace(/^\s*[•*-]\s*/, '').trim()).filter(Boolean);
 
   const avatarEntry = AVATAR_ITEMS.find((item) => item.id === avatarItem);
   const avatarAsset = avatarEntry?.asset ?? ASSETS.avatar;
@@ -42,7 +42,7 @@ export function Dorm({
   return (
     <>
       <header>
-        <h1>LarpedIn</h1>
+        <h1 className="brand-logo" aria-label="LarpedIn">Larped<span>in</span></h1>
         <p className="muted" style={{ margin: '0 0 12px' }}>
           Your internship sim. Photo ops → post → prize.
         </p>
@@ -97,6 +97,7 @@ export function Dorm({
 
       <section className="card">
         <h3>Daily stand-up · +5 XP (optional)</h3>
+        <p className="muted">Share a win from today and what you plan to do next.</p>
         {standUpSubmitted ? (
           <div className="standup-logged">
             <p className="standup-done" style={{ margin: 0 }}>
@@ -117,23 +118,17 @@ export function Dorm({
           <>
             <div className="standup-grid">
               <textarea
-                placeholder="Win (did)"
-                value={bullet1}
-                onChange={(e) => setBullet1(e.target.value)}
-                aria-label="Stand-up: win (did)"
-              />
-              <textarea
-                placeholder="Next (todo)"
-                value={bullet2}
-                onChange={(e) => setBullet2(e.target.value)}
-                aria-label="Stand-up: next (todo)"
+                placeholder={'• Win (did)\n• Next (todo)'}
+                value={standUp}
+                onChange={(e) => setStandUp(e.target.value)}
+                aria-label="Stand-up: win and next steps"
               />
             </div>
             <button
               className="btn btn-block"
               style={{ marginTop: 10 }}
-              disabled={!bullet1.trim() && !bullet2.trim()}
-              onClick={() => onSubmitStandUp(bullet1.trim(), bullet2.trim())}
+              disabled={bullets.length === 0}
+              onClick={() => onSubmitStandUp(bullets[0] ?? '', bullets.slice(1).join(' · '))}
             >
               Log stand-up
             </button>
