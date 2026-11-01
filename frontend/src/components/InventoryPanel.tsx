@@ -1,6 +1,6 @@
 import { useRef, useState } from 'react';
 import { ASSETS } from '../assets/manifest';
-import { ItemId, ITEMS, SpotId } from '../domain/items';
+import { ItemId, ITEMS, ITEMS_BY_UNLOCK, SpotId } from '../domain/items';
 import { ACCESSORIES, HELD_PROPS, AccessoryId, HeldPropId } from '../domain/gear';
 import { AVATAR_ITEMS, ROOM_ITEMS } from '../assets/manifest';
 
@@ -68,7 +68,7 @@ export function InventoryPanel({
           <h3 className="inv-title">Place in your room</h3>
           <p className="inv-hint">Drag an item onto a glowing spot, or tap an item and then a spot.</p>
           <div className="placeable-row">
-            {ITEMS.map((item) => {
+            {ITEMS_BY_UNLOCK.map((item) => {
               const unlocked = unlockedItemIds.includes(item.id);
               const placed = Object.values(placements).includes(item.id);
               return <button key={item.id} type="button" className="room-box-item placeable-tile" disabled={!unlocked}
@@ -131,7 +131,7 @@ export function InventoryPanel({
         <section>
           <h3 className="inv-title">Wear</h3>
           <div className="avatar-look-row">
-            {ACCESSORIES.map((item) => <button key={item.id} type="button" className={`inv-tile${accessory === item.id ? ' sel' : ''}`}
+            {[...ACCESSORIES].sort((a, b) => a.unlockXp - b.unlockXp).map((item) => <button key={item.id} type="button" className={`inv-tile${accessory === item.id ? ' sel' : ''}`}
               aria-pressed={accessory === item.id} disabled={xp < item.unlockXp}
               onClick={() => onSelectAccessory(accessory === item.id ? null : item.id)}>
               <img src={item.image} alt="" /><span className="inv-name">{item.name}</span>
@@ -142,7 +142,7 @@ export function InventoryPanel({
         <section>
           <h3 className="inv-title">Hold</h3>
           <div className="avatar-look-row">
-            {HELD_PROPS.map((item) => <button key={item.id} type="button" className={`inv-tile${heldProp === item.id ? ' sel' : ''}`}
+            {[...HELD_PROPS].sort((a, b) => a.unlockXp - b.unlockXp).map((item) => <button key={item.id} type="button" className={`inv-tile${heldProp === item.id ? ' sel' : ''}`}
               aria-pressed={heldProp === item.id} disabled={xp < item.unlockXp}
               onClick={() => onSelectHeldProp(heldProp === item.id ? null : item.id)}>
               <img src={item.image} alt="" /><span className="inv-name">{item.name}</span>

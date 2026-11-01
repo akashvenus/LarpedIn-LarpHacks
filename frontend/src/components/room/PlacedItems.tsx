@@ -3,7 +3,7 @@ import { ThreeEvent, useFrame } from '@react-three/fiber';
 import { Suspense, useRef } from 'react';
 import { MeshBasicMaterial } from 'three';
 import { ASSETS } from '../../assets/manifest';
-import { findItem, ItemId, RoomItem, RoomSpot, SpotId, SPOTS } from '../../domain/items';
+import { findItem, ItemId, RoomItem, RoomSpot, SpotId, SPOTS, SPOT_MARKER_SIZE } from '../../domain/items';
 
 export interface PlacedItemsProps {
   placements: Partial<Record<SpotId, ItemId>>;
@@ -50,7 +50,7 @@ function SpotMarker({ item, spot, onTapSpot }: { item: RoomItem; spot: RoomSpot;
 
   return (
     <mesh position={itemPosition(item, spot)} rotation={spot.rotation} onClick={onTap(onTapSpot)}>
-      <planeGeometry args={[item.width, item.height]} />
+      <planeGeometry args={spot.surface === 'wall' ? [SPOT_MARKER_SIZE, SPOT_MARKER_SIZE] : [item.width, item.height]} />
       <meshBasicMaterial ref={materialRef} color="#ffd166" transparent depthWrite={false} toneMapped={false} />
     </mesh>
   );

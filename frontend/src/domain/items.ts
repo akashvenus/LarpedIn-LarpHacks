@@ -9,6 +9,14 @@ export type SpotId =
   | 'wall-back-left'
   | 'wall-back-right'
   | 'wall-window-far'
+  | 'wall-desk-low-left'
+  | 'wall-desk-low-right'
+  | 'wall-desk-high-center'
+  | 'wall-back-low-left'
+  | 'wall-back-low-right'
+  | 'wall-back-high-center'
+  | 'wall-bed-high'
+  | 'wall-shelf-high'
   | 'desk-left'
   | 'desk-right'
   | 'shelf-top'
@@ -53,6 +61,19 @@ export const ITEMS: readonly RoomItem[] = [
   { id: 'books', name: 'Startup books', asset: 'startupBooks', surface: 'desk', width: 0.48, height: 0.4, unlockHint: 'Log a stand-up' },
 ];
 
+// These are ordering values; each item's actual unlock still depends on its action.
+const UNLOCK_ORDER: Record<ItemId, number> = {
+  stickers: 0, notes: 0,
+  mug: 5, plant: 5, books: 5,
+  poster: 20, pivot: 20, whiteboard: 20,
+  mousepad: 60, vision: 60,
+};
+
+export const ITEMS_BY_UNLOCK = [...ITEMS].sort((a, b) => UNLOCK_ORDER[a.id] - UNLOCK_ORDER[b.id]);
+
+/** Shared marker size keeps nearby targets distinct for both taps and drops. */
+export const SPOT_MARKER_SIZE = 0.4;
+
 const FACE_FORWARD: [number, number, number] = [0, 0, 0];
 const FACE_BACK: [number, number, number] = [0, Math.PI, 0];
 const FACE_WEST: [number, number, number] = [0, -Math.PI / 2, 0];
@@ -66,6 +87,14 @@ export const SPOTS: readonly RoomSpot[] = [
   { id: 'wall-back-left', surface: 'wall', position: [-1.2, 1.6, 2.97], rotation: FACE_BACK },
   { id: 'wall-back-right', surface: 'wall', position: [1.2, 1.6, 2.97], rotation: FACE_BACK },
   { id: 'wall-window-far', surface: 'wall', position: [2.96, 1.6, 2.05], rotation: FACE_WEST },
+  { id: 'wall-desk-low-left', surface: 'wall', position: [-2.15, 1.05, -2.97], rotation: FACE_FORWARD },
+  { id: 'wall-desk-low-right', surface: 'wall', position: [2.15, 1.05, -2.97], rotation: FACE_FORWARD },
+  { id: 'wall-desk-high-center', surface: 'wall', position: [0, 1.9, -2.97], rotation: FACE_FORWARD },
+  { id: 'wall-back-low-left', surface: 'wall', position: [-2.15, 1.05, 2.97], rotation: FACE_BACK },
+  { id: 'wall-back-low-right', surface: 'wall', position: [2.15, 1.05, 2.97], rotation: FACE_BACK },
+  { id: 'wall-back-high-center', surface: 'wall', position: [0, 1.9, 2.97], rotation: FACE_BACK },
+  { id: 'wall-bed-high', surface: 'wall', position: [-2.97, 1.9, 2.1], rotation: FACE_EAST },
+  { id: 'wall-shelf-high', surface: 'wall', position: [2.96, 1.9, -2.1], rotation: FACE_WEST },
   { id: 'desk-left', surface: 'desk', position: [-0.5, 0.76, -2.55], rotation: FACE_FORWARD },
   { id: 'desk-right', surface: 'desk', position: [0.5, 0.76, -2.55], rotation: FACE_FORWARD },
   { id: 'shelf-top', surface: 'desk', position: [2.8, 0.9, -1.5], rotation: FACE_WEST },

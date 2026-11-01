@@ -1,9 +1,9 @@
 import { DoubleSide, Mesh, MeshBasicMaterial, PlaneGeometry, Raycaster } from 'three';
-import { RoomItem, SpotId, SPOTS } from '../../domain/items';
+import { RoomItem, SpotId, SPOTS, SPOT_MARKER_SIZE } from '../../domain/items';
 
 /** Resolve a pointer ray against the same compatible planes used by the placement markers. */
 export function findDropTarget(item: RoomItem, raycaster: Raycaster): SpotId | undefined {
-  const geometry = new PlaneGeometry(item.width, item.height);
+  const geometry = new PlaneGeometry(item.surface === 'wall' ? SPOT_MARKER_SIZE : item.width, item.surface === 'wall' ? SPOT_MARKER_SIZE : item.height);
   const material = new MeshBasicMaterial({ side: DoubleSide });
   const markers = SPOTS.filter((spot) => spot.surface === item.surface).map((spot) => {
     const mesh = new Mesh(geometry, material);
