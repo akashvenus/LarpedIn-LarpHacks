@@ -290,16 +290,16 @@
 }
 
 .worksheet-card {
-  background: #fff4e0;
-  color: #2e2a5c;
+  background: #ffffff;
+  color: #191919;
   border-radius: 14px;
   padding: 16px 18px 18px;
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2);
+  border: 1px solid #d8d8d8;
   overflow: hidden;
 }
 
 .worksheet-caption {
-  color: rgba(46, 42, 92, 0.58);
+  color: #5e5e5e;
   font-family: ui-sans-serif, system-ui, sans-serif;
   font-size: 10px;
   font-weight: 700;
@@ -317,7 +317,7 @@
 }
 
 .given {
-  color: #2e2a5c;
+  color: #191919;
   font-weight: 700;
   font-style: italic;
   user-select: none;
@@ -333,7 +333,7 @@
   margin: 0 2px;
   padding: 0 2px;
   background: transparent;
-  color: #0e8a80;
+  color: #0a66c2;
   border: 0;
   border-radius: 3px;
   font: inherit;
@@ -344,13 +344,13 @@
 
 .blank-value {
   min-height: 1.25em;
-  border-bottom: 2px solid rgba(46, 42, 92, 0.55);
+  border-bottom: 2px solid #777777;
   overflow-wrap: anywhere;
 }
 
 .blank-label {
   align-self: center;
-  color: rgba(46, 42, 92, 0.62);
+  color: #5e5e5e;
   font-family: ui-sans-serif, system-ui, sans-serif;
   font-size: 9px;
   font-weight: 700;
@@ -361,16 +361,16 @@
 }
 
 .blank.active .blank-value {
-  border-bottom-color: #0e8a80;
+  border-bottom-color: #0a66c2;
   border-bottom-width: 3px;
 }
 
 .blank.active .blank-label {
-  color: #2e2a5c;
+  color: #191919;
 }
 
 .blank:focus-visible {
-  outline: 2px solid #0e8a80;
+  outline: 2px solid #0a66c2;
   outline-offset: 3px;
 }
 
@@ -522,7 +522,7 @@
 
 .personal-preview-text {
   margin: 14px 0 0;
-  color: #2e2a5c;
+  color: #191919;
   font-size: 15px;
   line-height: 1.55;
   white-space: pre-wrap;
@@ -539,15 +539,15 @@
   padding: 11px; background: var(--surface); color: var(--text); font: inherit; font-weight: 400;
 }
 .personal-field textarea { resize: vertical; }
-.personal-field input::placeholder, .personal-field textarea::placeholder { color: #b8b3d5; }
+.personal-field input::placeholder, .personal-field textarea::placeholder { color: #5e5e5e; }
 .personal-field :focus-visible, .personal-tags button:focus-visible { outline: 2px solid var(--teal); outline-offset: 2px; }
 .personal-tags { padding: 0; margin: 0; border: 0; }
 .personal-tags legend { margin-bottom: 8px; font-size: 14px; font-weight: 600; }
 .social .social-edit { margin-top: 12px; color: #0a66c2; border-color: #0a66c2; background: transparent; border-radius: 999px; }
 .personal-worksheet p { margin: 0 0 12px; }
 .personal-worksheet p:last-child { margin-bottom: 0; }
-.personal-worksheet .blank { background: rgba(14, 138, 128, 0.08); min-height: 44px; }
-.personal-worksheet .blank.active { background: rgba(14, 138, 128, 0.18); }
+.personal-worksheet .blank { background: #eef3f8; min-height: 44px; }
+.personal-worksheet .blank.active { background: #dceaf7; }
 
 .post-delete { margin-left: auto; align-self: flex-start; min-width: 44px; min-height: 44px; border: 0; border-radius: 8px; background: transparent; cursor: pointer; font-size: 19px; }
 .post-delete:focus-visible { outline: 2px solid #0a66c2; outline-offset: 2px; }

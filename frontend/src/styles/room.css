@@ -107,6 +107,7 @@
   padding: 8px 12px;
   border-radius: 12px;
   background: rgba(20, 18, 43, 0.88);
+  color: #ffffff;
   font-size: 13px;
 }
 
@@ -133,7 +134,7 @@
   padding: 12px;
   border: 1px solid var(--line);
   border-radius: 14px;
-  background: rgba(30, 27, 58, 0.97);
+  background: #ffffff;
   overflow-y: auto;
 }
 
