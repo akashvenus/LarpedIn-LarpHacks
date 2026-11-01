@@ -7,7 +7,6 @@ export function Inbox({ recruiter, message, postText, sent, sending }: {
 }) {
   return (
     <div className="social">
-      <span className="pill pill-sim">Demo simulation</span>
       <section className="card">
         <h3>Messages</h3>
         {sending ? <p className="inbox-waiting inbox-sending" role="status"><span className="inbox-spinner" aria-hidden="true" />Sending your post…</p> : sent ? (

@@ -569,3 +569,24 @@
 .inbox-spinner { width: 16px; height: 16px; border: 2px solid #c8d9e9; border-top-color: #0a66c2; border-radius: 50%; animation: inbox-spin 0.8s linear infinite; }
 @keyframes inbox-spin { to { transform: rotate(360deg); } }
 @media (prefers-reduced-motion: reduce) { .inbox-spinner { animation: none; border-color: #0a66c2; } }
+
+/* Feed and inbox share the same light surface, including navigation. */
+.app.social-page {
+  --bg: #f4f2ee;
+  --surface: #ffffff;
+  --surface-2: #eef3f8;
+  --line: #d8d8d8;
+  --text: #191919;
+  --muted: #5e5e5e;
+  background: var(--bg);
+  color: var(--text);
+  font-family: Arial, Helvetica, sans-serif;
+}
+.social-page .topbar { padding: 8px 10px; background: var(--surface); border: 1px solid var(--line); border-radius: 10px; }
+.social-page .icon-btn { background: transparent; border-color: transparent; color: #454545; }
+.social-page .icon-btn:hover { background: var(--surface-2); }
+.social-page .icon-btn:focus-visible { outline: 2px solid #0a66c2; outline-offset: 2px; }
+.social-wordmark { font-size: 23px; line-height: 1.1; white-space: nowrap; }
+.social-section { color: var(--muted); font-size: 14px; font-weight: 600; }
+.social-page .dock { background: rgba(255, 255, 255, 0.96); border-color: var(--line); }
+.social-page .dock-item.active { color: #0a66c2; background: var(--surface-2); }

@@ -291,7 +291,7 @@ export default function App() {
   };
 
   return (
-    <div className="app">
+    <div className={`app${screen === 'social' || screen === 'inbox' ? ' social-page' : ''}`}>
       {saveError && (
         <div role="alert" className="persistence-error">
           {isLocalDemo ? saveError : `Progress could not be saved to the database: ${saveError}`}
@@ -397,7 +397,8 @@ export default function App() {
             <button className="icon-btn" onClick={() => navigate('dorm')} aria-label="Back to dorm">
               ←
             </button>
-            <span className="topbar-title">{screen === 'inbox' ? 'Inbox' : 'Simulated LinkedIn'}</span>
+            <span className="brand-logo social-wordmark" aria-label="LarpedIn">Larped<span>in</span></span>
+            {screen === 'inbox' && <span className="social-section">Inbox</span>}
             <button type="button" className="icon-btn social-mail" aria-label={screen === 'inbox' ? 'Back to feed' : 'Open inbox'} onClick={() => navigate(screen === 'inbox' ? 'social' : 'inbox')}>
               {screen === 'inbox' ? '▤' : '✉️'}
             </button>

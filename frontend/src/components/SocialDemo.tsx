@@ -55,11 +55,6 @@ export function SocialDemo({
 
   return (
     <div className="social">
-      <div className="social-label">
-        <span className="pill pill-sim">Demo simulation</span>
-        <span className="muted">In-app only — no real account, no real messages.</span>
-      </div>
-
       {error && <p className="post-action-error" role="alert">{error}</p>}
       {!published ? (
         <section className="card">
