@@ -2,13 +2,10 @@ import { useTexture } from '@react-three/drei';
 import { useFrame } from '@react-three/fiber';
 import { MutableRefObject, useRef } from 'react';
 import { Group, Vector3 } from 'three';
-import { ASSETS } from '../../assets/manifest';
 import { CAMERA_BOUNDS, CRATE, CRATE_CENTER, OBSTACLES, PLAYER_RADIUS, WALK_BOUNDS, WARDROBE } from './layout';
 import { clearCameraDistance, isWithin, moveWithCollisions, Vec2, worldDirection } from './movement';
 
 const AVATAR_HEIGHT = 1.15;
-/** Width / height of avatar.png and avatar-mic.png. */
-const AVATAR_ASPECT = 0.7;
 const WALK_SPEED = 2.2;
 /** Caps the step after a dropped frame or a backgrounded tab, which could tunnel through furniture. */
 const MAX_FRAME_SECONDS = 0.05;
@@ -22,7 +19,9 @@ const WADDLE_RATE = 11;
 export const PLAYER_START: Vec2 = { x: 0.3, z: 0.4 };
 
 export interface PlayerProps {
-  micUnlocked: boolean;
+  avatarAsset: string;
+  /** Multiplier for looks whose frames have different padding. */
+  avatarScale: number;
   isFrozen: boolean;
   readInput: () => { x: number; y: number };
   yawRef: MutableRefObject<number>;
@@ -30,8 +29,11 @@ export interface PlayerProps {
 }
 
 /** Walking character and its follow camera. Position lives in refs because it changes every frame. */
-export function Player({ micUnlocked, isFrozen, readInput, yawRef, onNearCrateChange }: PlayerProps) {
-  const texture = useTexture(micUnlocked ? ASSETS.avatarMic : ASSETS.avatar);
+export function Player({ avatarAsset, avatarScale, isFrozen, readInput, yawRef, onNearCrateChange }: PlayerProps) {
+  const texture = useTexture(avatarAsset);
+  const image = texture.image as { width: number; height: number };
+  const height = AVATAR_HEIGHT * avatarScale;
+  const width = (height * image.width) / image.height;
   const rootRef = useRef<Group>(null);
   const spriteRef = useRef<Group>(null);
   const positionRef = useRef<Vec2>(PLAYER_START);
@@ -62,7 +64,7 @@ export function Player({ micUnlocked, isFrozen, readInput, yawRef, onNearCrateCh
     const isWalking = input.x !== 0 || input.y !== 0;
     walkTimeRef.current = isWalking ? walkTimeRef.current + dt : 0;
     const phase = walkTimeRef.current * WADDLE_RATE;
-    sprite.position.y = AVATAR_HEIGHT / 2 + Math.abs(Math.sin(phase)) * 0.05;
+    sprite.position.y = height / 2 + Math.abs(Math.sin(phase)) * 0.05;
     sprite.rotation.z = Math.sin(phase) * 0.07;
 
     const yaw = yawRef.current;
@@ -88,9 +90,9 @@ export function Player({ micUnlocked, isFrozen, readInput, yawRef, onNearCrateCh
         <circleGeometry args={[0.32, 24]} />
         <meshBasicMaterial color="#000000" transparent opacity={0.22} depthWrite={false} />
       </mesh>
-      <group ref={spriteRef} position={[0, AVATAR_HEIGHT / 2, 0]} rotation={[0, 0, 0, 'YXZ']}>
+      <group ref={spriteRef} position={[0, height / 2, 0]} rotation={[0, 0, 0, 'YXZ']}>
         <mesh>
-          <planeGeometry args={[AVATAR_HEIGHT * AVATAR_ASPECT, AVATAR_HEIGHT]} />
+          <planeGeometry args={[width, height]} />
           <meshBasicMaterial map={texture} transparent alphaTest={0.4} toneMapped={false} />
         </mesh>
       </group>

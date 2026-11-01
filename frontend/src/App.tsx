@@ -1,5 +1,5 @@
-import { useEffect, useReducer, useState } from 'react';
-import { compose, fetchDemo, localCompose } from './api';
+import { useEffect, useReducer, useRef, useState } from 'react';
+import { compose, fetchAiPreset, fetchDemo, localCompose, savePost } from './api';
 import { CameraGuide } from './components/CameraGuide';
 import { Dorm } from './components/Dorm';
 import { Events } from './components/Events';
@@ -8,7 +8,7 @@ import { PostComposer } from './components/PostComposer';
 import { SocialDemo } from './components/SocialDemo';
 import { Trophies } from './components/Trophies';
 import { demoReducer, initialState } from './domain/reducer';
-import { badgeUnlocked, derivedXp, giftEligible, lightsUnlocked, micUnlocked, photoList, unlockedItemIds } from './domain/selectors';
+import { badgeUnlocked, derivedXp, micUnlocked, photoList, unlockedItemIds } from './domain/selectors';
 import { ComposerInput, DemoData, PromptId } from './domain/types';
 
 type Screen = 'dorm' | 'events' | 'camera' | 'trophies' | 'composer' | 'gift' | 'social';
@@ -18,6 +18,7 @@ const DOCK: { id: Screen; label: string; icon: string }[] = [
   { id: 'events', label: 'Events', icon: '📅' },
   { id: 'camera', label: 'Camera', icon: '📷' },
   { id: 'trophies', label: 'Trophies', icon: '🏆' },
+  { id: 'social', label: 'Feed', icon: '▤' },
 ];
 
 export default function App() {
@@ -25,6 +26,8 @@ export default function App() {
   const [screen, setScreen] = useState<Screen>('dorm');
   const [demo, setDemo] = useState<DemoData | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
+  const lastComposerInput = useRef<ComposerInput | null>(null);
+  const publishedRef = useRef(false);
 
   useEffect(() => {
     let alive = true;
@@ -35,14 +38,6 @@ export default function App() {
       alive = false;
     };
   }, []);
-
-  // Gift is driven by required task flags, not XP: once everything is done,
-  // advance to the reveal exactly once (giftOpened gates repeats).
-  useEffect(() => {
-    if (demo && giftEligible(state) && !state.giftOpened) {
-      setScreen('gift');
-    }
-  }, [demo, state]);
 
   const selectedEvent = demo?.events.find((e) => e.id === state.eventId) ?? null;
 
@@ -71,7 +66,7 @@ export default function App() {
     );
   }
 
-  const showDock = !['composer', 'gift', 'social'].includes(screen);
+  const showDock = !['composer', 'gift'].includes(screen);
 
   const handleSelectEvent = (eventId: string) => {
     dispatch({ type: 'SELECT_EVENT', eventId });
@@ -97,11 +92,19 @@ export default function App() {
   };
 
   const handlePublish = (text: string) => {
+    if (publishedRef.current) return;
+    publishedRef.current = true;
     dispatch({ type: 'SET_POST_TEXT', text });
     dispatch({ type: 'PUBLISH_POST' });
+    if (state.eventId && !state.giftOpened) setScreen('gift');
+    const input = lastComposerInput.current;
+    if (input) {
+      void savePost(input).catch(() => {});
+    }
   };
 
-  const handleComposed = (text: string) => {
+  const handleComposed = (text: string, input: ComposerInput) => {
+    lastComposerInput.current = input;
     dispatch({ type: 'SET_POST_TEXT', text });
     // The LinkedIn mockup is now the publish surface (draft + Post button).
     setScreen('social');
@@ -112,12 +115,14 @@ export default function App() {
       {screen === 'dorm' && (
         <Dorm
           xp={derivedXp(state)}
-          micUnlocked={micUnlocked(state)}
-          lightsUnlocked={lightsUnlocked(state)}
           standUpSubmitted={state.standUpSubmitted}
           standUpBullets={state.standUpBullets}
           onSubmitStandUp={(b1, b2) => dispatch({ type: 'SUBMIT_STAND_UP', bullet1: b1, bullet2: b2 })}
           onFindEvent={() => setScreen('events')}
+          avatarItem={state.avatarItem}
+          roomItems={state.roomItems}
+          onSelectAvatar={(itemId) => dispatch({ type: 'SET_AVATAR_ITEM', itemId })}
+          onToggleRoomItem={(itemId) => dispatch({ type: 'TOGGLE_ROOM_ITEM', itemId })}
           unlockedItemIds={unlockedItemIds(state)}
           placements={state.placements}
           onPlaceItem={(itemId, spotId) => dispatch({ type: 'PLACE_ITEM', itemId, spotId })}
@@ -169,6 +174,7 @@ export default function App() {
             options={demo.composer}
             onCompose={handleCompose}
             onComposed={handleComposed}
+            onAiPreset={fetchAiPreset}
           />
         </div>
       )}
@@ -188,7 +194,7 @@ export default function App() {
         <Trophies
           badgeUnlocked={badgeUnlocked(state)}
           micUnlocked={micUnlocked(state)}
-          lightsUnlocked={lightsUnlocked(state)}
+          lightsPlaced={state.roomItems.includes('rgb-lights')}
           standUpSubmitted={state.standUpSubmitted}
         />
       )}

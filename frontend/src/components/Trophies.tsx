@@ -3,7 +3,7 @@ import { ASSETS } from '../assets/manifest';
 export interface TrophiesProps {
   badgeUnlocked: boolean;
   micUnlocked: boolean;
-  lightsUnlocked: boolean;
+  lightsPlaced: boolean;
   standUpSubmitted: boolean;
 }
 
@@ -12,7 +12,7 @@ export interface TrophiesProps {
  * real capture), RGB lights (from publishing), and the daily stand-up.
  * Locked rows stay visible so the judge sees what is still to come.
  */
-export function Trophies({ badgeUnlocked, micUnlocked, lightsUnlocked, standUpSubmitted }: TrophiesProps) {
+export function Trophies({ badgeUnlocked, micUnlocked, lightsPlaced, standUpSubmitted }: TrophiesProps) {
   return (
     <>
       <header>
@@ -40,7 +40,7 @@ export function Trophies({ badgeUnlocked, micUnlocked, lightsUnlocked, standUpSu
         <h3>Dorm shelf</h3>
         <div className="trophy-shelf">
           <div className={`shelf-row${micUnlocked ? ' unlocked' : ''}`}>
-            <img className="shelf-icon" src={ASSETS.mic} alt="" />
+            <img className="shelf-icon" src={ASSETS.avatarMic} alt="" />
             <div className="shelf-copy">
               <strong>Holdable mic</strong>
               <span className="muted">Capture one real photo in an event guide</span>
@@ -50,14 +50,14 @@ export function Trophies({ badgeUnlocked, micUnlocked, lightsUnlocked, standUpSu
             </span>
           </div>
 
-          <div className={`shelf-row${lightsUnlocked ? ' unlocked' : ''}`}>
+          <div className={`shelf-row${lightsPlaced ? ' unlocked' : ''}`}>
             <img className="shelf-icon" src={ASSETS.rgbLights} alt="" />
             <div className="shelf-copy">
               <strong>RGB desk lights</strong>
-              <span className="muted">Publish your event post</span>
+              <span className="muted">Place them from the dorm inventory</span>
             </div>
-            <span className={`shelf-status${lightsUnlocked ? ' on' : ''}`}>
-              {lightsUnlocked ? 'Unlocked' : 'Locked'}
+            <span className={`shelf-status${lightsPlaced ? ' on' : ''}`}>
+              {lightsPlaced ? 'Placed' : 'In inventory'}
             </span>
           </div>
 

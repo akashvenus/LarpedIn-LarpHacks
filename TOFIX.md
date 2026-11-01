@@ -1,3 +1,3 @@
-- There should be a circle button that has a briefcase icon in the top right of the little dorm view that shows the user's inventory that they can use to dress up their avatar.
-- This inventory should also be used for the static room items
-- AI takes the wheel should just randomly select options and not actually be hooked up to any hardcode or ai
+- Add a back button to return to the post.
+- The inventory should be accessible from a briefcase button in the dorm and include avatar and room items.
+- AI takes the wheel uses Gemini when configured and randomly selects options as a fallback.

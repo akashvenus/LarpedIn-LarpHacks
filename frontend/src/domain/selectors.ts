@@ -32,10 +32,6 @@ export function micUnlocked(state: DemoState): boolean {
   return anyPhoto(state);
 }
 
-export function lightsUnlocked(state: DemoState): boolean {
-  return state.postPublished;
-}
-
 const ITEM_UNLOCKS: Record<ItemId, (state: DemoState) => boolean> = {
   stickers: () => true,
   poster: (state) => state.eventId !== null,

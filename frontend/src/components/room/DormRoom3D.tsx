@@ -1,7 +1,7 @@
 import { useTexture } from '@react-three/drei';
 import { Canvas } from '@react-three/fiber';
 import { useState } from 'react';
-import { ASSETS } from '../../assets/manifest';
+import { ASSETS, AVATAR_ITEMS } from '../../assets/manifest';
 import { findItem, ItemId, SpotId } from '../../domain/items';
 import { ItemBoxPanel } from './ItemBoxPanel';
 import { Joystick } from './Joystick';
@@ -10,9 +10,13 @@ import { Player } from './Player';
 import { RgbLights, RoomShell } from './RoomShell';
 import { useDragYaw, useMoveInput } from './useRoomControls';
 
+// Switching looks in the inventory must not suspend the canvas and flash the fallback.
+AVATAR_ITEMS.forEach((item) => useTexture.preload(item.asset));
+
 export interface DormRoom3DProps {
-  micUnlocked: boolean;
-  lightsUnlocked: boolean;
+  avatarAsset: string;
+  avatarScale: number;
+  lightsPlaced: boolean;
   unlockedItemIds: ItemId[];
   placements: Partial<Record<SpotId, ItemId>>;
   onPlaceItem: (itemId: ItemId, spotId: SpotId) => void;
@@ -21,8 +25,9 @@ export interface DormRoom3DProps {
 
 /** Walkable dorm: the 3D scene plus its on-screen controls. */
 export default function DormRoom3D({
-  micUnlocked,
-  lightsUnlocked,
+  avatarAsset,
+  avatarScale,
+  lightsPlaced,
   unlockedItemIds,
   placements,
   onPlaceItem,
@@ -71,10 +76,10 @@ export default function DormRoom3D({
         onPointerDown={onPointerDown}
       >
         <Canvas dpr={[1, 2]} camera={{ position: [0.3, 1.6, 2.9], fov: 70, near: 0.05, far: 20 }}>
-          <ambientLight intensity={lightsUnlocked ? 1.1 : 1.6} />
+          <ambientLight intensity={lightsPlaced ? 1.1 : 1.6} />
           <directionalLight position={[-1, 2.4, 1]} intensity={1.4} />
           <RoomShell />
-          {lightsUnlocked && <RgbLights />}
+          {lightsPlaced && <RgbLights />}
           <PlacedItems
             placements={placements}
             carryingId={carryingId}
@@ -82,7 +87,8 @@ export default function DormRoom3D({
             onPickUp={handlePickUp}
           />
           <Player
-            micUnlocked={micUnlocked}
+            avatarAsset={avatarAsset}
+            avatarScale={avatarScale}
             isFrozen={isBoxOpen}
             readInput={readInput}
             yawRef={yawRef}

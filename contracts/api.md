@@ -1,8 +1,8 @@
 # LarpedIn API contract
 
-Contract version: 1. Changes are announced by Andrew to all workflows. Source: [build spec](../docs/larpedin-build-spec.md), sections 3 and 4.
+Contract version: 2. Changes are announced by Andrew to all workflows. Source: [build spec](../docs/larpedin-build-spec.md), sections 3 and 4, plus the post-lock Postgres and Gemini extension.
 
-All routes are under `/api` on the same origin as the frontend. No authentication, database, external calls, or photo uploads. JSON field names are camelCase.
+All routes are under `/api` on the same origin as the frontend. No authentication or photo uploads. `/api/compose` stays deterministic. Published posts may be stored in Postgres, and the AI preset route may call Gemini when `GEMINI_API_KEY` is configured; both features degrade gracefully. JSON field names are camelCase.
 
 ## `GET /api/health`
 
@@ -96,6 +96,76 @@ Return `422` when any of these hold:
 - `hashtagIds` does not contain 1 to 3 distinct ids.
 
 Clients rely on the status code only; the `422` body is not part of this contract.
+
+## `POST /api/ai/preset`
+
+Request:
+
+```json
+{"eventId": "larphacks"}
+```
+
+Response `200`:
+
+```json
+{
+  "source": "gemini",
+  "hookId": "hook-2",
+  "learningIds": ["learn-1", "learn-4", "learn-6"],
+  "conclusionId": "end-2",
+  "hashtagIds": ["ai", "hackathon"]
+}
+```
+
+`source` is `"gemini"` when the model returned a valid choice, or `"fallback"` when the key is absent, the call fails, or the model output is invalid. A fallback response is still `200` and always contains valid ids. Unknown `eventId` returns `422`.
+
+## `POST /api/posts`
+
+Request: the same body as `POST /api/compose`. The server regenerates `text` from the selected ids; clients do not send text.
+
+Response `201`:
+
+```json
+{
+  "id": 1,
+  "createdAt": "2026-11-01T18:30:00+00:00",
+  "eventId": "larphacks",
+  "hookId": "hook-1",
+  "learningIds": ["learn-1", "learn-2", "learn-3"],
+  "conclusionId": "end-1",
+  "hashtagIds": ["ai"],
+  "text": "..."
+}
+```
+
+Validation matches `POST /api/compose` and returns `422`. If `DATABASE_URL` is not configured or the database is unreachable, the route returns `503`; the demo may continue without persistence.
+
+## `GET /api/posts`
+
+Optional query: `limit` (default `20`, range `1` to `50`).
+
+Response `200`:
+
+```json
+{"posts": [{"id": 1, "createdAt": "2026-11-01T18:30:00+00:00", "eventId": "larphacks", "hookId": "hook-1", "learningIds": ["learn-1", "learn-2", "learn-3"], "conclusionId": "end-1", "hashtagIds": ["ai"], "text": "..."}]}
+```
+
+Newest posts first. Returns `422` for an out-of-range limit and `503` when the database is unavailable.
+
+## `GET /api/db/health`
+
+Response `200`:
+
+```json
+{"ok": true}
+```
+
+Returns `503` when `DATABASE_URL` is not configured or the database is unreachable. This is separate from `/api/health`, which must stay independent of the database.
+
+## Configuration
+
+- `DATABASE_URL`: Render Postgres connection string, injected from `render.yaml` or set locally.
+- `GEMINI_API_KEY`: server-side only; set in the Render dashboard or the local shell. It is never sent to the frontend or committed.
 
 ## Static frontend
 

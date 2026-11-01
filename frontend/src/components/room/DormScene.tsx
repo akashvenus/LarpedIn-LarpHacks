@@ -30,21 +30,22 @@ class SceneBoundary extends Component<{ fallback: ReactNode; children: ReactNode
   }
 }
 
-function FlatDorm({ micUnlocked, lightsUnlocked }: Pick<DormRoom3DProps, 'micUnlocked' | 'lightsUnlocked'>) {
+function FlatDorm({ avatarAsset, avatarScale, lightsPlaced }: Pick<DormRoom3DProps, 'avatarAsset' | 'avatarScale' | 'lightsPlaced'>) {
   return (
     <div className="dorm-flat" aria-label="Your dorm room">
       <img className="dorm-bg" src={ASSETS.dormBackground} alt="" />
       <div className="dorm-flat-items">
-        {lightsUnlocked && (
+        {lightsPlaced && (
           <div className="dorm-slot slot-lights">
-            <img className="item" src={ASSETS.rgbLights} alt="RGB lights, unlocked" />
+            <img className="item" src={ASSETS.rgbLights} alt="RGB lights, placed" />
           </div>
         )}
         <div className="dorm-slot slot-avatar">
           <img
             className="item"
-            src={micUnlocked ? ASSETS.avatarMic : ASSETS.avatar}
-            alt={micUnlocked ? 'You, holding your microphone' : 'You, in the dorm'}
+            src={avatarAsset}
+            style={avatarScale !== 1 ? { transform: `scale(${avatarScale})` } : undefined}
+            alt="You, in the dorm"
           />
         </div>
       </div>
@@ -52,10 +53,10 @@ function FlatDorm({ micUnlocked, lightsUnlocked }: Pick<DormRoom3DProps, 'micUnl
   );
 }
 
-/** Dorm panel: the lazy walkable room, or the flat photo scene when it cannot run. */
-export function DormScene(props: DormRoom3DProps) {
+/** Dorm panel: the lazy walkable room, or the flat photo scene when it cannot run. Children overlay either one. */
+export function DormScene({ children, ...props }: DormRoom3DProps & { children?: ReactNode }) {
   const [canUse3D] = useState(supportsWebGL);
-  const flat = <FlatDorm micUnlocked={props.micUnlocked} lightsUnlocked={props.lightsUnlocked} />;
+  const flat = <FlatDorm avatarAsset={props.avatarAsset} avatarScale={props.avatarScale} lightsPlaced={props.lightsPlaced} />;
 
   return (
     <div className="dorm-scene">
@@ -68,6 +69,7 @@ export function DormScene(props: DormRoom3DProps) {
       ) : (
         flat
       )}
+      {children}
     </div>
   );
 }

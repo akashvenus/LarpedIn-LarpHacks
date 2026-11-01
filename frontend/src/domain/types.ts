@@ -29,6 +29,14 @@ export interface ComposerInput {
   hashtagIds: string[];
 }
 
+export interface AiPreset {
+  source: 'gemini' | 'fallback';
+  hookId: string;
+  learningIds: string[];
+  conclusionId: string;
+  hashtagIds: string[];
+}
+
 export interface DemoEvent {
   id: string;
   title: string;
@@ -79,6 +87,10 @@ export interface DemoState {
   };
   postText: string;
   postPublished: boolean;
+  /** Selected avatar variant (see AVATAR_ITEMS). Cosmetics only. */
+  avatarItem: string;
+  /** Placed room item ids (see ROOM_ITEMS). Static decor, toggleable. */
+  roomItems: string[];
   standUpSubmitted: boolean;
   /** Stand-up bullets, kept so the completed stand-up re-renders with its content. */
   standUpBullets: { bullet1: string; bullet2: string } | null;
@@ -100,6 +112,8 @@ export type DemoAction =
   | { type: 'SET_POST_TEXT'; text: string }
   | { type: 'PUBLISH_POST' }
   | { type: 'SUBMIT_STAND_UP'; bullet1: string; bullet2: string }
+  | { type: 'SET_AVATAR_ITEM'; itemId: string }
+  | { type: 'TOGGLE_ROOM_ITEM'; itemId: string }
   | { type: 'GIFT_ANIMATION_DONE' }
   | { type: 'PLACE_ITEM'; itemId: ItemId; spotId: SpotId }
   | { type: 'REMOVE_ITEM'; spotId: SpotId };
@@ -111,6 +125,8 @@ export const initialState: DemoState = {
   selections: { hookId: null, learningIds: [], conclusionId: null, hashtagIds: [] },
   postText: '',
   postPublished: false,
+  avatarItem: 'base',
+  roomItems: [],
   standUpSubmitted: false,
   standUpBullets: null,
   giftOpened: false,

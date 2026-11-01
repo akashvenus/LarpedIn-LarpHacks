@@ -211,3 +211,67 @@ def test_path_traversal_does_not_leak_files():
     response = client.get("/..%2f..%2fcontent%2fdemo.json")
     assert response.status_code in (200, 404)
     assert "schemaVersion" not in response.text
+
+
+def test_ai_preset_falls_back_without_key(monkeypatch):
+    monkeypatch.delenv("GEMINI_API_KEY", raising=False)
+    response = client.post("/api/ai/preset", json={"eventId": DEMO["events"][0]["id"]})
+    assert response.status_code == 200
+    body = response.json()
+    assert body["source"] == "fallback"
+    assert body["hookId"] in {item["id"] for item in COMPOSER["hooks"]}
+    assert body["conclusionId"] in {item["id"] for item in COMPOSER["conclusions"]}
+    assert len(body["learningIds"]) == 3
+    assert len(set(body["learningIds"])) == 3
+    assert all(item in LEARNING_TEXT for item in body["learningIds"])
+    assert 1 <= len(body["hashtagIds"]) <= 3
+    assert len(set(body["hashtagIds"])) == len(body["hashtagIds"])
+    assert all(item in HASHTAG_TEXT for item in body["hashtagIds"])
+
+
+def test_ai_preset_unknown_event_returns_422(monkeypatch):
+    monkeypatch.delenv("GEMINI_API_KEY", raising=False)
+    response = client.post("/api/ai/preset", json={"eventId": "missing-event"})
+    assert response.status_code == 422
+    assert "eventId" in response.json()["detail"]
+
+
+def test_ai_preset_rejects_invalid_model_output():
+    from app.gemini import _valid_preset
+
+    assert _valid_preset(
+        {
+            "hookId": COMPOSER["hooks"][0]["id"],
+            "learningIds": [item["id"] for item in COMPOSER["learnings"][:3]],
+            "conclusionId": COMPOSER["conclusions"][0]["id"],
+            "hashtagIds": [COMPOSER["hashtags"][0]["id"]],
+        }
+    )
+    assert not _valid_preset(
+        {
+            "hookId": COMPOSER["hooks"][0]["id"],
+            "learningIds": ["missing-learning"] * 3,
+            "conclusionId": COMPOSER["conclusions"][0]["id"],
+            "hashtagIds": [COMPOSER["hashtags"][0]["id"]],
+        }
+    )
+
+
+def test_posts_endpoints_require_database(monkeypatch):
+    monkeypatch.delenv("DATABASE_URL", raising=False)
+    assert client.post("/api/posts", json=good_payload()).status_code == 503
+    assert client.get("/api/posts").status_code == 503
+    assert client.get("/api/db/health").status_code == 503
+
+
+def test_posts_validates_before_database(monkeypatch):
+    monkeypatch.delenv("DATABASE_URL", raising=False)
+    payload = good_payload()
+    payload["learningIds"] = payload["learningIds"][:2]
+    assert client.post("/api/posts", json=payload).status_code == 422
+
+
+def test_posts_limit_validation(monkeypatch):
+    monkeypatch.delenv("DATABASE_URL", raising=False)
+    assert client.get("/api/posts?limit=0").status_code == 422
+    assert client.get("/api/posts?limit=51").status_code == 422
