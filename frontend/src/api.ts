@@ -141,6 +141,14 @@ export async function deleteUserPost(clientId: string): Promise<void> {
   }
 }
 
+export async function resetBrowserData(clientId: string): Promise<void> {
+  const res = await fetch(`${apiBase}/api/demo-data/${encodeURIComponent(clientId)}`, { method: 'DELETE' });
+  if (!res.ok) {
+    const body = (await res.json().catch(() => null)) as { detail?: string } | null;
+    throw new ApiError(body?.detail || `Could not reset demo progress: ${res.status}`);
+  }
+}
+
 export async function fetchDemoState(clientId: string): Promise<DemoState | null> {
   const res = await fetch(`${apiBase}/api/state/${encodeURIComponent(clientId)}`, {
     headers: { Accept: 'application/json' },

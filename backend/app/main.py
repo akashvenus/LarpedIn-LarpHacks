@@ -9,7 +9,8 @@ from fastapi.staticfiles import StaticFiles
 from .compose import compose_personal_post, compose_post
 from .content import CONCLUSIONS, DEMO, EVENTS, HASHTAGS, HOOKS, LEARNINGS
 from .db import (DatabaseUnavailable, check_db, delete_browser_post, delete_user_post, list_posts,
-                 load_demo_state, load_user_state, save_demo_state, save_post, save_user_post, save_user_state)
+                 load_demo_state, load_user_state, reset_browser_data, save_demo_state, save_post,
+                 save_user_post, save_user_state)
 from .db import StandUpAlreadyPosted, delete_stand_up, list_stand_ups, save_stand_up, update_stand_up
 from .gemini import generate_preset
 from .models import (
@@ -188,6 +189,14 @@ def put_browser_post(client_id: UUID, request: BrowserPostRequest):
 def remove_browser_post(client_id: UUID):
     try:
         delete_browser_post(client_id)
+    except DatabaseUnavailable:
+        raise HTTPException(status_code=503, detail="Database unavailable")
+
+
+@app.delete("/api/demo-data/{client_id}", status_code=204)
+def reset_demo_data(client_id: UUID):
+    try:
+        reset_browser_data(client_id)
     except DatabaseUnavailable:
         raise HTTPException(status_code=503, detail="Database unavailable")
 
