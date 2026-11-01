@@ -79,6 +79,23 @@ export async function savePost(input: ComposerInput): Promise<void> {
   }
 }
 
+export async function saveUserPost(clientId: string, input: ComposerInput): Promise<string> {
+  const res = await fetch(`${apiBase}/api/user-post/${encodeURIComponent(clientId)}`, {
+    method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(input),
+  });
+  const body = (await res.json().catch(() => null)) as { text?: string; detail?: string } | null;
+  if (!res.ok || !body?.text) throw new ApiError(body?.detail || `Save post failed: ${res.status}`);
+  return body.text;
+}
+
+export async function deleteUserPost(clientId: string): Promise<void> {
+  const res = await fetch(`${apiBase}/api/user-post/${encodeURIComponent(clientId)}`, { method: 'DELETE' });
+  if (!res.ok) {
+    const body = (await res.json().catch(() => null)) as { detail?: string } | null;
+    throw new ApiError(body?.detail || `Delete post failed: ${res.status}`);
+  }
+}
+
 export function getBrowserClientId(): string {
   const existing = window.localStorage.getItem(CLIENT_ID_KEY);
   if (existing && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(existing)) {

@@ -7,7 +7,8 @@ import {
   getBrowserClientId,
   localCompose,
   saveDemoState,
-  savePost,
+  saveUserPost,
+  deleteUserPost,
 } from './api';
 import { CameraGuide } from './components/CameraGuide';
 import { Dorm } from './components/Dorm';
@@ -43,7 +44,12 @@ export default function App() {
   const clientId = useRef<string | null>(null);
   const saveQueue = useRef<Promise<void>>(Promise.resolve());
   const lastComposerInput = useRef<ComposerInput | null>(null);
-  const publishedRef = useRef(false);
+  const postOperation = useRef(false);
+  const [postBusy, setPostBusy] = useState(false);
+  const [postError, setPostError] = useState<string | null>(null);
+  const [editingPost, setEditingPost] = useState(false);
+  const [composerVersion, setComposerVersion] = useState(0);
+  const [replacement, setReplacement] = useState<{ text: string; input: ComposerInput } | null>(null);
 
   const handleComposerDraft = useCallback((draft: DemoState['composerDraft']) => {
     dispatch({ type: 'SET_COMPOSER_DRAFT', draft });
@@ -89,10 +95,11 @@ export default function App() {
   }, [loadAttempt]);
 
   useEffect(() => {
-    if (!stateLoaded || !clientId.current) return;
+    if (!stateLoaded || !clientId.current || postOperation.current) return;
     const snapshot = state;
     setSaving(true);
     const timer = window.setTimeout(() => {
+      if (postOperation.current) return;
       saveQueue.current = saveQueue.current
         .then(() => saveDemoState(clientId.current!, snapshot))
         .then(() => {
@@ -179,34 +186,61 @@ export default function App() {
     }
   };
 
-  const handlePublish = (text: string) => {
-    if (publishedRef.current) return;
-    publishedRef.current = true;
-    dispatch({ type: 'SET_POST_TEXT', text });
-    dispatch({ type: 'PUBLISH_POST' });
-    if (state.eventId && !state.giftOpened) navigate('gift');
-    const input = lastComposerInput.current ?? state.composerInput ?? (
-      state.eventId && state.selections.hookId && state.selections.conclusionId &&
-      state.selections.learningIds.length === 3 && state.selections.hashtagIds.length > 0
-        ? {
-            eventId: state.eventId,
-            hookId: state.selections.hookId,
-            learningIds: state.selections.learningIds as [string, string, string],
-            conclusionId: state.selections.conclusionId,
-            hashtagIds: state.selections.hashtagIds,
-          }
-        : null
-    );
-    if (input) {
-      void savePost(input).catch(() => {});
+  const handlePublish = async (text: string) => {
+    if (postOperation.current || !clientId.current || !text.trim()) return;
+    const input = replacement?.input ?? lastComposerInput.current ?? state.composerInput;
+    if (!input) { setPostError('Open the composer to prepare your post.'); return; }
+    postOperation.current = true;
+    setPostBusy(true);
+    setPostError(null);
+    try {
+      await saveQueue.current;
+      const savedText = await saveUserPost(clientId.current, input);
+      if (savedText !== text) throw new Error('The saved post did not match the draft.');
+      dispatch({ type: 'SET_COMPOSER_INPUT', input });
+      dispatch({ type: 'SET_POST_TEXT', text });
+      dispatch({ type: 'PUBLISH_POST' });
+      lastComposerInput.current = input;
+      setReplacement(null);
+      setEditingPost(false);
+      if (state.eventId && !state.giftOpened) navigate('gift');
+    } catch (err) {
+      setPostError(err instanceof Error ? err.message : 'Could not save your post.');
+    } finally {
+      postOperation.current = false;
+      setPostBusy(false);
+    }
+  };
+
+  const handleDelete = async () => {
+    if (postOperation.current || !clientId.current) return;
+    postOperation.current = true;
+    setPostBusy(true);
+    setPostError(null);
+    try {
+      await saveQueue.current;
+      await deleteUserPost(clientId.current);
+      lastComposerInput.current = null;
+      setReplacement(null);
+      setEditingPost(false);
+      setComposerVersion((version) => version + 1);
+      dispatch({ type: 'DELETE_POST' });
+    } catch (err) {
+      setPostError(err instanceof Error ? err.message : 'Could not delete your post.');
+    } finally {
+      postOperation.current = false;
+      setPostBusy(false);
     }
   };
 
   const handleComposed = (text: string, input: ComposerInput) => {
-    lastComposerInput.current = input;
-    dispatch({ type: 'SET_COMPOSER_INPUT', input });
-    dispatch({ type: 'SET_POST_TEXT', text });
-    // The LinkedIn mockup is now the publish surface (draft + Post button).
+    if (editingPost) {
+      setReplacement({ text, input });
+    } else {
+      lastComposerInput.current = input;
+      dispatch({ type: 'SET_COMPOSER_INPUT', input });
+      dispatch({ type: 'SET_POST_TEXT', text });
+    }
     navigate('social');
   };
 
@@ -278,7 +312,7 @@ export default function App() {
             <span className="topbar-title">Post composer</span>
           </header>
           <PostComposer
-            key={selectedEvent.id}
+            key={`${selectedEvent.id}-${composerVersion}`}
             event={selectedEvent}
             demo={demo}
             photos={photoList(state)}
@@ -322,13 +356,19 @@ export default function App() {
           <SocialDemo
             profile={demo.profile}
             recruiter={demo.recruiter}
-            postText={state.postText}
+            postText={editingPost ? replacement?.text ?? '' : state.postText}
             photos={photoList(state)}
             outreachMessage={demo.outreachMessage}
             outreachSent={state.outreachSent}
-            published={state.postPublished}
-            onPublish={handlePublish}
-            onEdit={state.postText && selectedEvent && !state.postPublished ? () => navigate('composer') : undefined}
+            published={state.postPublished && !editingPost}
+            onPublish={(text) => void handlePublish(text)}
+            onEdit={selectedEvent ? () => navigate('composer') : undefined}
+            onReplace={selectedEvent && state.postPublished ? () => { setEditingPost(true); setReplacement(null); navigate('composer'); } : undefined}
+            onDelete={() => void handleDelete()}
+            busy={postBusy}
+            error={postError}
+            replacing={editingPost}
+            onCancelReplace={() => { setEditingPost(false); setReplacement(null); }}
           />
         </div>
       )}

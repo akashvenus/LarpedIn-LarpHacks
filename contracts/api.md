@@ -173,3 +173,7 @@ Returns `503` when `DATABASE_URL` is not configured or the database is unreachab
 ## Static frontend
 
 FastAPI serves `frontend/dist` at `/` with an HTML fallback for SPA navigation. Unknown `/api/*` paths return `404`, never the HTML fallback.
+
+## Browser-scoped demo post
+
+`PUT /api/user-post/{client_id}` accepts the same body as `POST /api/compose`, and creates or replaces the browser's single demo post. It returns `{"text": "..."}`. `DELETE /api/user-post/{client_id}` deletes that browser's post and clears its post and draft fields from saved progress in the same database transaction; it returns `204`. Both endpoints return `503` if the database is unavailable. The browser ID is a demo identifier, not account authentication. The older `/api/posts` records have no browser identifier and cannot safely be attributed to a user.

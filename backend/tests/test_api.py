@@ -333,3 +333,39 @@ def test_personal_custom_lines_and_validation(monkeypatch):
     assert compose({**payload, "customHook": "x" * 281}).status_code == 422
     assert compose({**payload, "customConclusion": "x" * 281}).status_code == 422
     assert compose({**payload, "format": "legacy"}).json()["text"] == compose(good_payload()).json()["text"]
+
+
+def test_user_post_replacement_and_deletion_are_scoped(monkeypatch):
+    from app import main
+    posts = {}
+    def save(client_id, event_id, text, composer_input):
+        posts[str(client_id)] = {"eventId": event_id, "text": text, "input": composer_input}
+    def delete(client_id):
+        posts.pop(str(client_id), None)
+    monkeypatch.setattr(main, "save_user_post", save)
+    monkeypatch.setattr(main, "delete_user_post", delete)
+    first = "11111111-1111-4111-8111-111111111111"
+    second = "22222222-2222-4222-8222-222222222222"
+    payload = {**good_payload(), "format": "personal", "moment": "first version"}
+    assert client.put(f"/api/user-post/{first}", json=payload).status_code == 200
+    assert client.put(f"/api/user-post/{second}", json=payload).status_code == 200
+    replacement = {**payload, "moment": "replacement"}
+    response = client.put(f"/api/user-post/{first}", json=replacement)
+    assert response.status_code == 200
+    assert "replacement" in posts[first]["text"] == response.json()["text"]
+    assert "first version" in posts[second]["text"]
+    assert client.delete(f"/api/user-post/{first}").status_code == 204
+    assert first not in posts and second in posts
+    assert client.delete("/api/user-post/not-a-uuid").status_code == 422
+
+
+def test_user_post_database_failures_are_reported(monkeypatch):
+    from app import main
+    from app.db import DatabaseUnavailable
+    def fail(*args):
+        raise DatabaseUnavailable()
+    monkeypatch.setattr(main, "save_user_post", fail)
+    monkeypatch.setattr(main, "delete_user_post", fail)
+    client_id = "11111111-1111-4111-8111-111111111111"
+    assert client.put(f"/api/user-post/{client_id}", json=good_payload()).status_code == 503
+    assert client.delete(f"/api/user-post/{client_id}").status_code == 503

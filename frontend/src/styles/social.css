@@ -548,3 +548,8 @@
 .personal-worksheet p:last-child { margin-bottom: 0; }
 .personal-worksheet .blank { background: rgba(14, 138, 128, 0.08); min-height: 44px; }
 .personal-worksheet .blank.active { background: rgba(14, 138, 128, 0.18); }
+
+.post-delete { margin-left: auto; align-self: flex-start; min-width: 44px; min-height: 44px; border: 0; border-radius: 8px; background: transparent; cursor: pointer; font-size: 19px; }
+.post-delete:focus-visible { outline: 2px solid #0a66c2; outline-offset: 2px; }
+.post-delete:disabled { opacity: 0.5; cursor: wait; }
+.post-action-error { margin: 0; padding: 10px 12px; color: #8a1c1c; background: #fff0ef; border: 1px solid #dca6a1; border-radius: 8px; }

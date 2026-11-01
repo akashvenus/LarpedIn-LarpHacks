@@ -15,6 +15,12 @@ export interface SocialDemoProps {
   published: boolean;
   onPublish: (text: string) => void;
   onEdit?: () => void;
+  onReplace?: () => void;
+  onDelete: () => void;
+  onCancelReplace: () => void;
+  busy: boolean;
+  error: string | null;
+  replacing: boolean;
 }
 
 function initials(name: string): string {
@@ -48,6 +54,12 @@ export function SocialDemo({
   published,
   onPublish,
   onEdit,
+  onReplace,
+  onDelete,
+  onCancelReplace,
+  busy,
+  error,
+  replacing,
 }: SocialDemoProps) {
   const [messageShown, setMessageShown] = useState(false);
 
@@ -82,6 +94,7 @@ export function SocialDemo({
         </div>
       </section>
 
+      {error && <p className="post-action-error" role="alert">{error}</p>}
       {!published ? (
         <section className="card">
           <h3>Your post · draft</h3>
@@ -102,17 +115,18 @@ export function SocialDemo({
           </article>
           {onEdit && (
             <button type="button" className="btn btn-block social-edit" onClick={onEdit}>
-              Edit post
+              {postText ? 'Edit post' : 'Create post'}
             </button>
           )}
           <button
             className="btn btn-primary btn-block"
             style={{ marginTop: 12 }}
-            disabled={!postText.trim()}
+            disabled={!postText.trim() || busy}
             onClick={() => onPublish(postText)}
           >
-            📤 Post to feed · +40 XP
+            {busy ? 'Saving…' : replacing ? 'Save replacement' : '📤 Post to feed · +40 XP'}
           </button>
+          {replacing && <button type="button" className="btn btn-block social-edit" onClick={onCancelReplace} disabled={busy}>Cancel replacement</button>}
         </section>
       ) : (
         <>
@@ -125,9 +139,11 @@ export function SocialDemo({
                   <strong>{profile.name}</strong>
                   <div className="muted feed-time">{profile.headline} · Just now</div>
                 </div>
+                <button type="button" className="post-delete" aria-label="Delete post" title="Delete post" onClick={onDelete} disabled={busy}>🗑️</button>
               </div>
               <p className="feed-text">{postText}</p>
               {photoGrid}
+              {onReplace && <button type="button" className="btn social-edit" onClick={onReplace} disabled={busy}>Edit post</button>}
               <div className="feed-fake-actions" aria-hidden>
                 <span>👍 12</span>
                 <span>💬 3</span>

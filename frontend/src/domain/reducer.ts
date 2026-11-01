@@ -156,6 +156,9 @@ export function demoReducer(state: DemoState, action: DemoAction): DemoState {
       if (state.postPublished || !state.postText.trim()) return state;
       return { ...state, postPublished: true };
 
+    case 'DELETE_POST':
+      return { ...state, postText: '', postPublished: false, composerInput: null, composerDraft: initialState.composerDraft, selections: initialState.selections };
+
     case 'SUBMIT_STAND_UP':
       if (state.standUpSubmitted) return state;
       return {

@@ -136,6 +136,7 @@ export type DemoAction =
   | { type: 'SET_COMPOSER_DRAFT'; draft: ComposerDraft }
   | { type: 'SET_POST_TEXT'; text: string }
   | { type: 'PUBLISH_POST' }
+  | { type: 'DELETE_POST' }
   | { type: 'SUBMIT_STAND_UP'; bullet1: string; bullet2: string }
   | { type: 'SET_STAND_UP_DRAFT'; draft: string }
   | { type: 'SET_AVATAR_ITEM'; itemId: string }

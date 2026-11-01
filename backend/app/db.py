@@ -128,3 +128,52 @@ def save_demo_state(client_id, state):
             )
     except psycopg.Error as error:
         raise DatabaseUnavailable("Could not save progress") from error
+
+
+CREATE_USER_POSTS = """
+CREATE TABLE IF NOT EXISTS user_posts (
+    client_id UUID PRIMARY KEY,
+    event_id TEXT NOT NULL,
+    post_text TEXT NOT NULL,
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+)
+"""
+
+
+def save_user_post(client_id, event_id, text, composer_input):
+    try:
+        with _connect() as conn:
+            conn.execute(CREATE_USER_POSTS)
+            conn.execute(
+                """INSERT INTO user_posts (client_id, event_id, post_text)
+                   VALUES (%s, %s, %s)
+                   ON CONFLICT (client_id) DO UPDATE SET
+                     event_id = EXCLUDED.event_id, post_text = EXCLUDED.post_text,
+                     updated_at = now()""",
+                (client_id, event_id, text),
+            )
+            conn.execute(CREATE_DEMO_STATES_TABLE)
+            conn.execute(
+                """UPDATE demo_states SET state = state || %s, updated_at = now()
+                   WHERE client_id = %s""",
+                (Jsonb({"postText": text, "postPublished": True, "composerInput": composer_input}), client_id),
+            )
+    except psycopg.Error as error:
+        raise DatabaseUnavailable("Could not save post") from error
+
+
+def delete_user_post(client_id):
+    try:
+        with _connect() as conn:
+            conn.execute(CREATE_USER_POSTS)
+            conn.execute(CREATE_DEMO_STATES_TABLE)
+            conn.execute("DELETE FROM user_posts WHERE client_id = %s", (client_id,))
+            conn.execute(
+                """UPDATE demo_states SET state = state || %s, updated_at = now()
+                   WHERE client_id = %s""",
+                (Jsonb({"postText": "", "postPublished": False, "composerInput": None,
+                       "composerDraft": {"answers": {}, "hashtagIds": [], "active": "hook", "customOpen": False, "customDraft": ""},
+                       "selections": {"hookId": None, "learningIds": [], "conclusionId": None, "hashtagIds": []}}), client_id),
+            )
+    except psycopg.Error as error:
+        raise DatabaseUnavailable("Could not delete post") from error

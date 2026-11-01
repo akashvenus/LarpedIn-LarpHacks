@@ -8,7 +8,7 @@ from fastapi.staticfiles import StaticFiles
 
 from .compose import compose_personal_post, compose_post
 from .content import CONCLUSIONS, DEMO, EVENTS, HASHTAGS, HOOKS, LEARNINGS
-from .db import DatabaseUnavailable, check_db, list_posts, load_demo_state, save_demo_state, save_post
+from .db import DatabaseUnavailable, check_db, delete_user_post, list_posts, load_demo_state, save_demo_state, save_post, save_user_post
 from .gemini import generate_preset
 from .models import (
     AiPresetRequest,
@@ -107,6 +107,24 @@ def get_posts(limit: int = 20):
         raise HTTPException(status_code=422, detail="limit must be between 1 and 50")
     try:
         return {"posts": list_posts(limit)}
+    except DatabaseUnavailable:
+        raise HTTPException(status_code=503, detail="Database unavailable")
+
+
+@app.put("/api/user-post/{client_id}", response_model=ComposeResponse)
+def put_user_post(client_id: UUID, request: ComposeRequest):
+    text = compose_from_request(request)
+    try:
+        save_user_post(client_id, request.eventId, text, request.model_dump(mode="json"))
+    except DatabaseUnavailable:
+        raise HTTPException(status_code=503, detail="Database unavailable")
+    return {"text": text}
+
+
+@app.delete("/api/user-post/{client_id}", status_code=204)
+def remove_user_post(client_id: UUID):
+    try:
+        delete_user_post(client_id)
     except DatabaseUnavailable:
         raise HTTPException(status_code=503, detail="Database unavailable")
 
