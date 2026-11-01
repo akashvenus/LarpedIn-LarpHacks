@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { ArrowRight, X } from 'lucide-react';
+import { ArrowRight, BriefcaseBusiness, X } from 'lucide-react';
 import { AVATAR_ITEMS } from '../assets/manifest';
 import { ItemId, SpotId } from '../domain/items';
 import { AccessoryId, HeldPropId } from '../domain/gear';
@@ -155,7 +155,7 @@ export function Dorm({
           aria-label="Open inventory"
           title="Inventory"
         >
-          🧳
+          <BriefcaseBusiness size={21} aria-hidden="true" />
         </button>
         <InventoryPanel
           open={inventoryOpen}

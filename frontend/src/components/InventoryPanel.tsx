@@ -1,4 +1,5 @@
 import { useRef, useState } from 'react';
+import { BriefcaseBusiness } from 'lucide-react';
 import { ASSETS } from '../assets/manifest';
 import { ItemId, ITEMS, ITEMS_BY_UNLOCK, SpotId } from '../domain/items';
 import { ACCESSORIES, HELD_PROPS, AccessoryId, HeldPropId } from '../domain/gear';
@@ -84,7 +85,7 @@ export function InventoryPanel({
           onPointerCancel={() => { swipeRef.current = null; setSwipeOffset(0); }}>
           <span className="sheet-handle" aria-hidden="true" />
           <div className="sheet-header-row">
-            <h2 style={{ margin: 0 }}>🧳 Inventory</h2>
+            <h2 style={{ margin: 0 }}><BriefcaseBusiness size={20} aria-hidden="true" /> Inventory</h2>
             <button className="icon-btn sheet-close" onClick={onClose} aria-label="Close inventory">
               ✕
             </button>

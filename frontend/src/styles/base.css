@@ -768,6 +768,7 @@ h2 {
   border-radius: 50%;
   border: 1px solid rgba(255, 255, 255, 0.25);
   background: rgba(20, 18, 43, 0.72);
+  color: #fff;
   backdrop-filter: blur(6px);
   font-size: 20px;
   line-height: 1;

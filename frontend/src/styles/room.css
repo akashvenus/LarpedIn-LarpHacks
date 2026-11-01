@@ -240,6 +240,7 @@
 }
 .sheet-header:active { cursor: grabbing; }
 .sheet-header-row { display: flex; align-items: center; justify-content: space-between; }
+.sheet-header-row h2 { display: flex; align-items: center; gap: 8px; }
 .sheet-handle { width: 38px; height: 4px; align-self: center; border-radius: 999px; background: #a5adb5; }
 .placeable-row { display: flex; gap: 8px; overflow-x: auto; padding: 8px 0; }
 .placeable-tile { flex: 0 0 96px; touch-action: none; user-select: none; }
