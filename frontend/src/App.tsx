@@ -1,5 +1,5 @@
-import { useEffect, useReducer, useState } from 'react';
-import { compose, fetchDemo, localCompose } from './api';
+import { useEffect, useReducer, useRef, useState } from 'react';
+import { compose, fetchAiPreset, fetchDemo, localCompose, savePost } from './api';
 import { CameraGuide } from './components/CameraGuide';
 import { Dorm } from './components/Dorm';
 import { Events } from './components/Events';
@@ -25,6 +25,8 @@ export default function App() {
   const [screen, setScreen] = useState<Screen>('dorm');
   const [demo, setDemo] = useState<DemoData | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
+  const lastComposerInput = useRef<ComposerInput | null>(null);
+  const publishedRef = useRef(false);
 
   useEffect(() => {
     let alive = true;
@@ -97,11 +99,18 @@ export default function App() {
   };
 
   const handlePublish = (text: string) => {
+    if (publishedRef.current) return;
+    publishedRef.current = true;
     dispatch({ type: 'SET_POST_TEXT', text });
     dispatch({ type: 'PUBLISH_POST' });
+    const input = lastComposerInput.current;
+    if (input) {
+      void savePost(input).catch(() => {});
+    }
   };
 
-  const handleComposed = (text: string) => {
+  const handleComposed = (text: string, input: ComposerInput) => {
+    lastComposerInput.current = input;
     dispatch({ type: 'SET_POST_TEXT', text });
     // The LinkedIn mockup is now the publish surface (draft + Post button).
     setScreen('social');
@@ -165,6 +174,7 @@ export default function App() {
             options={demo.composer}
             onCompose={handleCompose}
             onComposed={handleComposed}
+            onAiPreset={fetchAiPreset}
           />
         </div>
       )}

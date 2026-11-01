@@ -27,6 +27,14 @@ export interface ComposerInput {
   hashtagIds: string[];
 }
 
+export interface AiPreset {
+  source: 'gemini' | 'fallback';
+  hookId: string;
+  learningIds: string[];
+  conclusionId: string;
+  hashtagIds: string[];
+}
+
 export interface DemoEvent {
   id: string;
   title: string;
