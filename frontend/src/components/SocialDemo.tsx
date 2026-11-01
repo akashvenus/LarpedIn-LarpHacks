@@ -1,5 +1,4 @@
 import { ASSETS } from '../assets/manifest';
-import { Repeat2 } from 'lucide-react';
 import { useState } from 'react';
 import { PostActions } from './PostActions';
 import { StandUpEditor } from './StandUpEditor';
@@ -177,11 +176,6 @@ export function SocialDemo({
               </div>
               <p className="feed-text">{postText}</p>
               {photoGrid}
-              <div className="feed-fake-actions" aria-hidden>
-                <span>👍 12</span>
-                <span>💬 3</span>
-                <span><Repeat2 size={15} className="repost-icon" aria-hidden="true" /> 1 repost</span>
-              </div>
             </article>
           </section>
           {communityFeed}
