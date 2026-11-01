@@ -5,12 +5,12 @@ import { initialState } from './types';
 
 describe('unlockedItemIds', () => {
   it('starts with only the starter item', () => {
-    expect(unlockedItemIds(initialState)).toEqual(['stickers', 'notes']);
+    expect(unlockedItemIds(initialState)).toEqual(['sama-lisa', 'stickers', 'notes']);
   });
 
   it('adds items as progress flags are set', () => {
     const state = { ...initialState, eventId: 'larphacks', standUpSubmitted: true, postPublished: true };
-    expect(unlockedItemIds(state)).toEqual(['stickers', 'poster', 'mug', 'mousepad', 'notes', 'pivot', 'vision', 'whiteboard', 'plant', 'books']);
+    expect(unlockedItemIds(state)).toEqual(['sama-lisa', 'stickers', 'poster', 'mug', 'mousepad', 'notes', 'pivot', 'vision', 'whiteboard', 'plant', 'books']);
   });
 });
 

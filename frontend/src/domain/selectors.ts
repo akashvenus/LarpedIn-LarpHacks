@@ -38,6 +38,7 @@ const ITEM_UNLOCKS: Record<ItemId, (state: DemoState) => boolean> = {
   mug: (state) => state.standUpSubmitted,
   mousepad: (state) => state.postPublished,
   notes: () => true,
+  'sama-lisa': () => true,
   pivot: (state) => state.eventId !== null,
   vision: (state) => state.postPublished,
   whiteboard: (state) => state.eventId !== null,
