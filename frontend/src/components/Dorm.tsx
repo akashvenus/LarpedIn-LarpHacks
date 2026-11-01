@@ -6,20 +6,23 @@ export interface DormProps {
   micUnlocked: boolean;
   lightsUnlocked: boolean;
   standUpSubmitted: boolean;
-  onSubmitStandUp: () => void;
+  standUpBullets: { bullet1: string; bullet2: string } | null;
+  onSubmitStandUp: (bullet1: string, bullet2: string) => void;
   onFindEvent: () => void;
 }
 
 /**
  * Dorm screen (F1): backdrop, avatar, internship XP bar, unlockable
  * cosmetics in fixed slots, event CTA, and the optional two-bullet
- * stand-up (+5 XP, can never unlock the gift on its own).
+ * stand-up (+5 XP, can never unlock the gift on its own). The completed
+ * stand-up keeps its content for the rest of the session.
  */
 export function Dorm({
   xp,
   micUnlocked,
   lightsUnlocked,
   standUpSubmitted,
+  standUpBullets,
   onSubmitStandUp,
   onFindEvent,
 }: DormProps) {
@@ -77,30 +80,42 @@ export function Dorm({
       <section className="card">
         <h3>Daily stand-up · +5 XP (optional)</h3>
         {standUpSubmitted ? (
-          <p className="standup-done" style={{ margin: 0 }}>
-            ✅ Stand-up logged. The sim believes in you.
-          </p>
+          <div className="standup-logged">
+            <p className="standup-done" style={{ margin: 0 }}>
+              ✅ Stand-up logged
+            </p>
+            {standUpBullets && (
+              <ul className="standup-bullets">
+                <li>
+                  <strong>Win (did):</strong> {standUpBullets.bullet1 || '—'}
+                </li>
+                <li>
+                  <strong>Next (todo):</strong> {standUpBullets.bullet2 || '—'}
+                </li>
+              </ul>
+            )}
+          </div>
         ) : (
           <>
             <div className="standup-grid">
               <textarea
-                placeholder="Win / did yesterday"
+                placeholder="Win (did)"
                 value={bullet1}
                 onChange={(e) => setBullet1(e.target.value)}
-                aria-label="Stand-up bullet one"
+                aria-label="Stand-up: win (did)"
               />
               <textarea
-                placeholder="Next up"
+                placeholder="Next (todo)"
                 value={bullet2}
                 onChange={(e) => setBullet2(e.target.value)}
-                aria-label="Stand-up bullet two"
+                aria-label="Stand-up: next (todo)"
               />
             </div>
             <button
               className="btn btn-block"
               style={{ marginTop: 10 }}
               disabled={!bullet1.trim() && !bullet2.trim()}
-              onClick={onSubmitStandUp}
+              onClick={() => onSubmitStandUp(bullet1.trim(), bullet2.trim())}
             >
               Log stand-up
             </button>

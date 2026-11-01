@@ -10,7 +10,13 @@ export interface CameraGuideProps {
   onContinue: () => void;
 }
 
-type CamStatus = 'starting' | 'live' | 'denied' | 'unsupported';
+type CamStatus =
+  | { kind: 'starting' }
+  | { kind: 'live' }
+  | { kind: 'denied' }
+  | { kind: 'nocamera' }
+  | { kind: 'insecure' }
+  | { kind: 'error'; message: string };
 
 /**
  * Event photo guide (F2): live getUserMedia preview, exactly one real
@@ -18,7 +24,8 @@ type CamStatus = 'starting' | 'live' | 'denied' | 'unsupported';
  * prompts, thumbnail, and continue only when all four are complete.
  *
  * - Tracks are stopped on unmount.
- * - Permission denial gets a clear retry state.
+ * - Failures are classified (denied / no camera / insecure context /
+ *   other) with a clear explanation and a retry where one makes sense.
  * - The photo is a device-local Blob; never persisted or uploaded.
  */
 export function CameraGuide({
@@ -31,7 +38,7 @@ export function CameraGuide({
 }: CameraGuideProps) {
   const videoRef = useRef<HTMLVideoElement>(null);
   const streamRef = useRef<MediaStream | null>(null);
-  const [status, setStatus] = useState<CamStatus>('starting');
+  const [status, setStatus] = useState<CamStatus>({ kind: 'starting' });
   const [captureTarget, setCaptureTarget] = useState<PromptId>('room');
   const [captured, setCaptured] = useState(photoUrl !== null);
 
@@ -41,11 +48,15 @@ export function CameraGuide({
   }, []);
 
   const startCamera = useCallback(async () => {
-    setStatus('starting');
+    setStatus({ kind: 'starting' });
     stopStream();
     try {
+      if (window.isSecureContext === false) {
+        setStatus({ kind: 'insecure' });
+        return;
+      }
       if (!navigator.mediaDevices?.getUserMedia) {
-        setStatus('unsupported');
+        setStatus({ kind: 'nocamera' });
         return;
       }
       const stream = await navigator.mediaDevices.getUserMedia({
@@ -58,9 +69,22 @@ export function CameraGuide({
         video.srcObject = stream;
         await video.play().catch(() => undefined);
       }
-      setStatus('live');
-    } catch {
-      setStatus('denied');
+      setStatus({ kind: 'live' });
+    } catch (err) {
+      const name = err instanceof DOMException ? err.name : '';
+      if (name === 'NotAllowedError' || name === 'SecurityError') {
+        setStatus({ kind: 'denied' });
+      } else if (
+        name === 'NotFoundError' ||
+        name === 'OverconstrainedError' ||
+        name === 'NotReadableError'
+      ) {
+        setStatus({ kind: 'nocamera' });
+      } else if (name === 'InsecureContextError') {
+        setStatus({ kind: 'insecure' });
+      } else {
+        setStatus({ kind: 'error', message: err instanceof Error ? err.message : String(err) });
+      }
     }
   }, [stopStream]);
 
@@ -87,6 +111,7 @@ export function CameraGuide({
   }, [captureTarget, onCapture, stopStream]);
 
   const allComplete = completedPrompts.length === PROMPTS.length;
+  const live = status.kind === 'live';
 
   return (
     <>
@@ -99,27 +124,53 @@ export function CameraGuide({
 
       <div className="cam-stage">
         <video ref={videoRef} className="cam-video" muted playsInline autoPlay />
-        {status === 'starting' && (
+        {status.kind === 'starting' && (
           <div className="cam-overlay">
             <div className="cam-spinner" aria-hidden />
             <p>Starting camera…</p>
           </div>
         )}
-        {status === 'denied' && (
+        {status.kind === 'denied' && (
           <div className="cam-overlay">
-            <p>📷 Camera blocked.</p>
-            <p className="muted">Allow camera access in your browser, then try again.</p>
+            <p>📷 Camera permission was blocked</p>
+            <p className="muted">
+              Your browser stopped LarpedIn from using the camera. Click the camera icon (or the
+              padlock) in the address bar, set it to <strong>Allow</strong>, then retry. In Chrome:
+              lock icon → Camera → Allow → reload.
+            </p>
             <button className="btn btn-primary" onClick={() => void startCamera()}>
               Retry camera
             </button>
           </div>
         )}
-        {status === 'unsupported' && (
+        {status.kind === 'nocamera' && (
           <div className="cam-overlay">
-            <p>📷 Camera not available.</p>
+            <p>📷 No camera available</p>
             <p className="muted">
-              This demo needs a real camera over HTTPS (or localhost) with permission granted.
+              No camera was found on this device (or it is in use by another app). Close other
+              camera apps and retry, or switch to a device with a camera.
             </p>
+            <button className="btn" onClick={() => void startCamera()}>
+              Try again
+            </button>
+          </div>
+        )}
+        {status.kind === 'insecure' && (
+          <div className="cam-overlay">
+            <p>🔒 Camera needs a secure connection</p>
+            <p className="muted">
+              Browsers only expose the camera over HTTPS (or localhost). Open the deployed URL, or
+              run the app locally, then reload.
+            </p>
+          </div>
+        )}
+        {status.kind === 'error' && (
+          <div className="cam-overlay">
+            <p>⚠️ Camera failed to start</p>
+            <p className="muted">{status.message || 'Unknown error.'}</p>
+            <button className="btn" onClick={() => void startCamera()}>
+              Retry camera
+            </button>
           </div>
         )}
         {captured && photoUrl && (
@@ -130,7 +181,7 @@ export function CameraGuide({
       </div>
 
       <div className="cam-controls">
-        {!captured && status === 'live' && (
+        {!captured && live && (
           <>
             <div className="cam-target-row" aria-label="Which prompt this capture fulfills">
               <span className="cam-target-label">Capture counts for:</span>

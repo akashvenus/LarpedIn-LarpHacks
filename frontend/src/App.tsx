@@ -1,5 +1,5 @@
 import { useEffect, useReducer, useState } from 'react';
-import { compose, fetchDemo, localComposeText } from './api';
+import { compose, fetchDemo, localCompose } from './api';
 import { CameraGuide } from './components/CameraGuide';
 import { Dorm } from './components/Dorm';
 import { Events } from './components/Events';
@@ -86,10 +86,11 @@ export default function App() {
     try {
       return await compose(input);
     } catch (err) {
-      // TypeError = network failure (backend absent). Show a real error
-      // for API rejections (e.g. 422 invalid ids).
-      if (err instanceof TypeError && demo && selectedEvent) {
-        return localComposeText(input, demo.composer, selectedEvent.title);
+      // TypeError = network failure (backend absent) → run the in-browser
+      // clone of POST /api/compose (same validation, same format).
+      // Real API errors (e.g. 422) are surfaced, not masked.
+      if (err instanceof TypeError && demo) {
+        return localCompose(input, demo);
       }
       throw err;
     }
@@ -108,7 +109,8 @@ export default function App() {
           micUnlocked={micUnlocked(state)}
           lightsUnlocked={lightsUnlocked(state)}
           standUpSubmitted={state.standUpSubmitted}
-          onSubmitStandUp={() => dispatch({ type: 'SUBMIT_STAND_UP' })}
+          standUpBullets={state.standUpBullets}
+          onSubmitStandUp={(b1, b2) => dispatch({ type: 'SUBMIT_STAND_UP', bullet1: b1, bullet2: b2 })}
           onFindEvent={() => setScreen('events')}
         />
       )}
@@ -134,10 +136,12 @@ export default function App() {
         ) : (
           <div className="empty-pick">
             <div className="empty-pick-icon" aria-hidden>📷</div>
-            <h2>Camera is ready</h2>
-            <p className="muted">Pick an event first to open its photo guide.</p>
+            <h2>Event photo guide</h2>
+            <p className="muted">
+              Pick an event first — its photo guide (and your post) are built around it.
+            </p>
             <button className="btn btn-primary" onClick={() => setScreen('events')}>
-              Choose an event
+              Select an event
             </button>
           </div>
         ))}
@@ -161,7 +165,14 @@ export default function App() {
 
       {screen === 'gift' && <GiftReveal onComplete={() => setScreen('social')} />}
 
-      {screen === 'trophies' && <Trophies badgeUnlocked={badgeUnlocked(state)} />}
+      {screen === 'trophies' && (
+        <Trophies
+          badgeUnlocked={badgeUnlocked(state)}
+          micUnlocked={micUnlocked(state)}
+          lightsUnlocked={lightsUnlocked(state)}
+          standUpSubmitted={state.standUpSubmitted}
+        />
+      )}
 
       {screen === 'social' && (
         <div className="page-with-header">

@@ -148,7 +148,11 @@ export function demoReducer(state: DemoState, action: DemoAction): DemoState {
 
     case 'SUBMIT_STAND_UP':
       if (state.standUpSubmitted) return state;
-      return { ...state, standUpSubmitted: true };
+      return {
+        ...state,
+        standUpSubmitted: true,
+        standUpBullets: { bullet1: action.bullet1, bullet2: action.bullet2 },
+      };
 
     case 'GIFT_ANIMATION_DONE':
       // One callback: mark the gift open and send the simulated message.

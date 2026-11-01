@@ -139,6 +139,78 @@
   color: var(--teal);
   font-size: 13px;
   font-weight: 600;
+  opacity: 0;
+  transition: opacity 0.4s ease;
+}
+
+.gift-advance.show {
+  opacity: 1;
+}
+
+/* ---------- Gift: free recruiter message post (closed -> open) ----------
+ * The prize arrives as a sealed post card that opens into a
+ * LinkedIn-style post. Same TUNABLE territory as the box animation:
+ * re-cut these keyframes freely, keep the .open class contract.
+ * ----------------------------------------------------------------- */
+
+.gift-post-wrap {
+  width: min(330px, calc(100vw - 48px));
+  display: grid;
+  place-items: center;
+}
+
+.gift-post-sealed,
+.gift-post-open {
+  grid-area: 1 / 1;
+}
+
+.gift-post-sealed {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  background: linear-gradient(135deg, var(--surface-2), var(--surface));
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  padding: 16px 20px;
+  font-size: 14px;
+  animation: post-seal-in 0.5s cubic-bezier(0.22, 1, 0.36, 1) both;
+  transition: opacity 0.45s ease, transform 0.45s ease;
+}
+
+.gift-post-open {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  padding: 14px;
+  opacity: 0;
+  transform: scale(0.9) rotateX(10deg);
+  transition: opacity 0.5s ease 0.15s, transform 0.5s ease 0.15s;
+  perspective: 600px;
+}
+
+.gift-post-open h2 {
+  margin: 2px 0 0;
+}
+
+.gift-post-wrap.open .gift-post-sealed {
+  opacity: 0;
+  transform: scale(0.88) translateY(-10px);
+  pointer-events: none;
+}
+
+.gift-post-wrap.open .gift-post-open {
+  opacity: 1;
+  transform: scale(1) rotateX(0deg);
+}
+
+@keyframes post-seal-in {
+  from { opacity: 0; transform: translateY(14px) scale(0.95); }
+  to { opacity: 1; transform: none; }
+}
 }
 
 /* ---------- Simulated social ---------- */

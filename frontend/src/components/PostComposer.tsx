@@ -18,8 +18,9 @@ export interface PostComposerProps {
 type Phase = 'choose' | 'composing' | 'preview';
 
 /**
- * MadLibs post composer (F3): choose a hook, exactly three distinct
- * learnings, a conclusion, and 1–3 hashtags. "AI take the wheel"
+ * MadLibs post composer (F3). Order per UX review: 1) the selected
+ * event (shown, not just data), 2) hook, 3) exactly three distinct
+ * learnings, 4) conclusion, 5) 1–3 hashtags. "AI take the wheel"
  * prefills a deterministic curated preset. The assembled text is
  * editable before publishing via onPublish. No typing required.
  */
@@ -80,7 +81,20 @@ export function PostComposer({ event, options, onCompose, onPublish }: PostCompo
   return (
     <div className="composer">
       <section className="card">
-        <h3>1 · Pick your hook</h3>
+        <h3>1 · Your event</h3>
+        <div className={`event-pick${event.featured ? ' featured' : ''}`}>
+          <div className="event-title-row">
+            <strong>{event.title}</strong>
+            {event.featured && <span className="pill pill-featured">Featured</span>}
+          </div>
+          <p className="event-meta" style={{ margin: '4px 0 0' }}>
+            {event.dateLabel} · {event.venueLabel} · selected in Suggested events
+          </p>
+        </div>
+      </section>
+
+      <section className="card">
+        <h3>2 · Pick your hook</h3>
         <div className="choice-list">
           {options.hooks.map((h) => (
             <button
@@ -96,7 +110,7 @@ export function PostComposer({ event, options, onCompose, onPublish }: PostCompo
 
       <section className="card">
         <h3>
-          2 · Three things you learned <span className="muted">({learningIds.length}/3)</span>
+          3 · Three things you learned <span className="muted">({learningIds.length}/3)</span>
         </h3>
         <div className="choice-list">
           {options.learnings.map((l) => (
@@ -113,7 +127,7 @@ export function PostComposer({ event, options, onCompose, onPublish }: PostCompo
       </section>
 
       <section className="card">
-        <h3>3 · Land the conclusion</h3>
+        <h3>4 · Land the conclusion</h3>
         <div className="choice-list">
           {options.conclusions.map((c) => (
             <button
@@ -129,7 +143,7 @@ export function PostComposer({ event, options, onCompose, onPublish }: PostCompo
 
       <section className="card">
         <h3>
-          4 · Hashtags <span className="muted">(1–3)</span>
+          5 · Hashtags <span className="muted">(1–3)</span>
         </h3>
         <div className="chip-row">
           {options.hashtags.map((t) => (

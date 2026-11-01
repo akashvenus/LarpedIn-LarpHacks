@@ -49,30 +49,47 @@ export async function compose(input: ComposerInput): Promise<string> {
   return body.text;
 }
 /**
- * Local fallback used only when the backend is unreachable (e.g.
- * frontend-only dev). Production rehearsal always prefers the API.
- * Format mirrors the build spec §4: hook, event sentence, three-item
- * learning list, conclusion, hashtags.
+ * Clone of POST /api/compose for standalone dev — used only when the
+ * backend is unreachable (network error). Mirrors the locked contract:
+ * validates known ids, exactly three DISTINCT learnings, and one to
+ * three DISTINCT hashtags; invalid input throws a 422-style error.
+ * Deterministic format per build spec §4: hook, event sentence,
+ * three-item learning list, conclusion, hashtags. Preserve order.
  */
-export function localComposeText(
-  input: ComposerInput,
-  options: { hooks: { id: string; text: string }[]; learnings: { id: string; text: string }[]; conclusions: { id: string; text: string }[]; hashtags: { id: string; text: string }[] },
-  eventTitle: string,
-): string {
+export function localCompose(input: ComposerInput, demo: DemoData): string {
   const find = (arr: { id: string; text: string }[], id: string) =>
-    arr.find((o) => o.id === id)?.text ?? '';
-  const hook = find(options.hooks, input.hookId);
-  const learnings = input.learningIds.map((id) => find(options.learnings, id)).filter(Boolean);
-  const conclusion = find(options.conclusions, input.conclusionId);
-  const hashtags = input.hashtagIds.map((id) => find(options.hashtags, id)).filter(Boolean);
+    arr.find((o) => o.id === id);
 
-  return [
-    hook,
-    `I just wrapped up ${eventTitle}.`,
-    ...learnings.map((l) => `• ${l}`),
-    conclusion,
-    hashtags.join(' '),
-  ]
-    .filter(Boolean)
-    .join('\n');
+  const event = demo.events.find((e) => e.id === input.eventId);
+  if (!event) throw new ApiError(`422: unknown eventId "${input.eventId}"`);
+  if (!find(demo.composer.hooks, input.hookId))
+    throw new ApiError(`422: unknown hookId "${input.hookId}"`);
+  if (!find(demo.composer.conclusions, input.conclusionId))
+    throw new ApiError(`422: unknown conclusionId "${input.conclusionId}"`);
+
+  const learningIds = input.learningIds;
+  if (learningIds.length !== 3 || new Set(learningIds).size !== 3) {
+    throw new ApiError('422: learningIds must contain exactly three distinct ids');
+  }
+  for (const id of learningIds) {
+    if (!find(demo.composer.learnings, id)) throw new ApiError(`422: unknown learningId "${id}"`);
+  }
+
+  const hashtagIds = input.hashtagIds;
+  if (hashtagIds.length < 1 || hashtagIds.length > 3 || new Set(hashtagIds).size !== hashtagIds.length) {
+    throw new ApiError('422: hashtagIds must contain one to three distinct ids');
+  }
+  for (const id of hashtagIds) {
+    if (!find(demo.composer.hashtags, id)) throw new ApiError(`422: unknown hashtagId "${id}"`);
+  }
+
+  const text = [
+    find(demo.composer.hooks, input.hookId)!.text,
+    `I just wrapped up ${event.title}.`,
+    ...learningIds.map((id) => `\u2022 ${find(demo.composer.learnings, id)!.text}`),
+    find(demo.composer.conclusions, input.conclusionId)!.text,
+    hashtagIds.map((id) => find(demo.composer.hashtags, id)!.text).join(' '),
+  ].join('\n');
+
+  return text;
 }

@@ -67,6 +67,8 @@ export interface DemoState {
   postText: string;
   postPublished: boolean;
   standUpSubmitted: boolean;
+  /** Stand-up bullets, kept so the completed stand-up re-renders with its content. */
+  standUpBullets: { bullet1: string; bullet2: string } | null;
   giftOpened: boolean;
   outreachSent: boolean;
 }
@@ -83,7 +85,7 @@ export type DemoAction =
   | { type: 'SET_PRESET'; preset: { hookId: string; learningIds: string[]; conclusionId: string; hashtagIds: string[] } }
   | { type: 'SET_POST_TEXT'; text: string }
   | { type: 'PUBLISH_POST' }
-  | { type: 'SUBMIT_STAND_UP' }
+  | { type: 'SUBMIT_STAND_UP'; bullet1: string; bullet2: string }
   | { type: 'GIFT_ANIMATION_DONE' };
 
 export const initialState: DemoState = {
@@ -95,6 +97,7 @@ export const initialState: DemoState = {
   postText: '',
   postPublished: false,
   standUpSubmitted: false,
+  standUpBullets: null,
   giftOpened: false,
   outreachSent: false,
 };

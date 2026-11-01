@@ -7,30 +7,34 @@ export interface GiftRevealProps {
 }
 
 /**
- * Gift reveal (F3): the closed gift box image is split into two CSS
- * layers (lid = top 42%, body = bottom 58%) and animated: the lid comes
- * off, then the box fades out. See the marked block in social.css —
- * Spencer tunes the keyframes there (ChatGPT-assisted) without touching
- * this component. onComplete is guarded to fire exactly once.
+ * Gift reveal (F3):
+ *   1. Closed gift image (split into lid/body CSS layers) wiggles, the
+ *      lid comes off, the box fades.
+ *   2. A sealed "Free recruiter message post" card appears, then opens
+ *      to reveal the prize (title kept: "Free recruiter message").
+ *   3. Auto-advances. All timing lives in social.css (TUNABLE BLOCK)
+ *      and the timers below.
  */
 export function GiftReveal({ onComplete }: GiftRevealProps) {
   const [running, setRunning] = useState(false);
-  const [showCopy, setShowCopy] = useState(false);
+  const [postVisible, setPostVisible] = useState(false);
+  const [postOpen, setPostOpen] = useState(false);
   const firedRef = useRef(false);
 
   useEffect(() => {
-    // Start the CSS animation on the next frame after mount.
     const runTimer = window.setTimeout(() => setRunning(true), 60);
-    const copyTimer = window.setTimeout(() => setShowCopy(true), 2300);
+    const postTimer = window.setTimeout(() => setPostVisible(true), 2500);
+    const openTimer = window.setTimeout(() => setPostOpen(true), 3200);
     const doneTimer = window.setTimeout(() => {
       if (!firedRef.current) {
         firedRef.current = true;
         onComplete();
       }
-    }, 4300);
+    }, 5400);
     return () => {
       window.clearTimeout(runTimer);
-      window.clearTimeout(copyTimer);
+      window.clearTimeout(postTimer);
+      window.clearTimeout(openTimer);
       window.clearTimeout(doneTimer);
     };
   }, [onComplete]);
@@ -44,23 +48,39 @@ export function GiftReveal({ onComplete }: GiftRevealProps) {
         <div className="gift-part gift-lid" style={bg} />
       </div>
 
-      <div className={`gift-copy${showCopy ? ' show' : ''}`}>
-        <h1>You earned a prize</h1>
-        <div className="prize-row">
-          <div className="prize-icon" aria-hidden>
-            <span role="img" aria-label="Profile photo icon">📷</span>
+      {postVisible && (
+        <div className={`gift-post-wrap${postOpen ? ' open' : ''}`}>
+          <div className="gift-post-sealed">
+            <span aria-hidden>🔏</span>
+            <strong>Free recruiter message post</strong>
+            <span aria-hidden>🔏</span>
           </div>
-          <div className="prize-icon" aria-hidden>
-            <span role="img" aria-label="Message icon">💬</span>
-          </div>
+          <article className="gift-post-open">
+            <div className="feed-head">
+              <img className="feed-avatar" src={ASSETS.avatar} alt="" />
+              <div>
+                <strong>You</strong>
+                <div className="muted feed-time">Just now · simulated post</div>
+              </div>
+            </div>
+            <div className="prize-row">
+              <div className="prize-icon" aria-hidden>
+                <span role="img" aria-label="Profile photo icon">📷</span>
+              </div>
+              <div className="prize-icon" aria-hidden>
+                <span role="img" aria-label="Message icon">💬</span>
+              </div>
+            </div>
+            <h2>Free recruiter message</h2>
+            <p className="muted">
+              One profile-photo post plus a prewritten outreach message, automatically sent to a
+              fictional recruiter inside the demo simulation.
+            </p>
+          </article>
         </div>
-        <h2>Free recruiter message</h2>
-        <p className="muted">
-          A profile-photo post plus one prewritten outreach message, auto-sent to a fictional
-          recruiter inside the demo simulation.
-        </p>
-        <p className="gift-advance">Opening your simulated inbox…</p>
-      </div>
+      )}
+
+      <p className={`gift-advance${postOpen ? ' show' : ''}`}>Opening your simulated inbox…</p>
     </div>
   );
 }

@@ -535,3 +535,121 @@ h2 {
     flex-direction: column;
   }
 }
+
+/* ---------- Stand-up (logged state) ---------- */
+
+.standup-logged {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.standup-bullets {
+  margin: 0;
+  padding-left: 18px;
+  font-size: 13px;
+  color: var(--muted);
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.standup-bullets strong {
+  color: var(--text);
+}
+
+/* ---------- Composer: selected event (step 1) ---------- */
+
+.event-pick {
+  background: var(--bg);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 12px;
+}
+
+.event-pick.featured {
+  border-color: rgba(255, 209, 102, 0.5);
+}
+
+.event-pick .event-title-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 15px;
+}
+
+/* ---------- Trophies: dorm shelf ---------- */
+
+.trophy-shelf {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.shelf-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  background: var(--bg);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 10px 12px;
+  transition: border-color 0.3s ease;
+}
+
+.shelf-row.unlocked {
+  border-color: rgba(123, 228, 149, 0.45);
+}
+
+.shelf-icon {
+  width: 46px;
+  height: 46px;
+  object-fit: contain;
+  border-radius: 8px;
+  filter: grayscale(1);
+  opacity: 0.4;
+  transition: filter 0.3s ease, opacity 0.3s ease;
+}
+
+.shelf-row.unlocked .shelf-icon {
+  filter: none;
+  opacity: 1;
+}
+
+.shelf-emoji {
+  width: 46px;
+  height: 46px;
+  display: grid;
+  place-items: center;
+  font-size: 26px;
+  border-radius: 8px;
+  background: var(--surface-2);
+  filter: grayscale(1);
+  opacity: 0.4;
+  transition: filter 0.3s ease, opacity 0.3s ease;
+}
+
+.shelf-row.unlocked .shelf-emoji {
+  filter: none;
+  opacity: 1;
+}
+
+.shelf-copy {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  font-size: 14px;
+}
+
+.shelf-status {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--muted);
+}
+
+.shelf-status.on {
+  color: var(--ok);
+}
