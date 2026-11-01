@@ -47,7 +47,7 @@ export function PostComposer({ event, demo, photos, draft, onDraftChange, onComp
   const selectSlot = (slot: Slot) => {
     setActive(slot);
     setCustomOpen(false);
-    setCustomDraft('');
+    setCustomDraft(slot !== 'hashtags' && answers[slot]?.custom ? answers[slot]?.value ?? '' : '');
   };
   const choose = (slot: TextSlot, value: string, custom: boolean, id?: string) => {
     const trimmed = value.trim();
@@ -157,9 +157,15 @@ export function PostComposer({ event, demo, photos, draft, onDraftChange, onComp
           <button type="button" className="btn" disabled={hashtagIds.length === 0} onClick={() => selectSlot(slots.find((slot) => slot !== 'hashtags' && !answers[slot as TextSlot]) ?? 'hashtags')}>Continue</button>
         </> : <>
           <div className="choice-list">{choices.map((item) => <button type="button" className="choice" key={item.id ?? item.value} onClick={() => choose(active, item.value, false, item.id)}>{item.value}</button>)}
-            <button type="button" className={`choice${customOpen ? ' on' : ''}`} onClick={() => { setCustomOpen(true); setCustomDraft(answers[active]?.custom ? answers[active]?.value ?? '' : ''); }}>Fill in your own</button>
+            <div className="custom-answer-row">
+              <input id="custom-answer" type="text" placeholder="Fill in your own" aria-label={`Fill in your own ${labels[active].toLowerCase()}`}
+                value={customDraft} maxLength={active === 'person' ? 120 : 280}
+                onChange={(e) => { setCustomOpen(true); setCustomDraft(e.target.value); }}
+                onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); choose(active, customDraft, true); } }} />
+              <button type="button" className="custom-answer-confirm" aria-label={`Confirm ${labels[active].toLowerCase()}`}
+                disabled={!customDraft.trim()} onClick={() => choose(active, customDraft, true)}>✓</button>
+            </div>
           </div>
-          {customOpen && <div className="personal-field"><label htmlFor="custom-answer">Your {labels[active].toLowerCase()}</label><textarea id="custom-answer" value={customDraft} onChange={(e) => setCustomDraft(e.target.value)} maxLength={active === 'person' ? 120 : 280} rows={2} /><button type="button" className="btn" disabled={!customDraft.trim()} onClick={() => choose(active, customDraft, true)}>Use answer</button></div>}
         </>}
         <p className="worksheet-helper">Tap any blank to change its answer.</p>
       </section>

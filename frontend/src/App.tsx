@@ -467,7 +467,6 @@ export default function App() {
             completedPrompts={state.completedPrompts}
             photos={state.photos}
             onCapture={handleCapture}
-            onCheck={(promptId) => dispatch({ type: 'CHECK_PROMPT', promptId })}
             onContinue={() => navigate('composer')}
           />
         ) : (
