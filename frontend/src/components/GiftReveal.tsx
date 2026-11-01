@@ -2,53 +2,67 @@ import { useEffect, useRef, useState } from 'react';
 import { ASSETS } from '../assets/manifest';
 
 export interface GiftRevealProps {
-  /** Fired exactly once, after the animation sequence finishes. */
+  /** Fired exactly once, after the animation + prize card sequence finishes. */
   onComplete: () => void;
 }
 
 /**
- * Gift reveal (F3):
- *   1. Closed gift image (split into lid/body CSS layers) wiggles, the
- *      lid comes off, the box fades.
- *   2. A sealed "Free recruiter message post" card appears, then opens
- *      to reveal the prize (title kept: "Free recruiter message").
- *   3. Auto-advances. All timing lives in social.css (TUNABLE BLOCK)
- *      and the timers below.
+ * Gift reveal (F3): the drop-in animation lives in
+ * public/assets/gift-animation.html (Spencer's, self-contained) and runs
+ * in an iframe. It signals completion with postMessage({type:'gift-done'});
+ * a 6.5s fallback timer guarantees the demo never strands, even if the
+ * file or the signal is missing.
+ *
+ * After the signal: a sealed "Free recruiter message post" card appears
+ * and opens (title kept: "Free recruiter message"), then auto-advance.
  */
 export function GiftReveal({ onComplete }: GiftRevealProps) {
-  const [running, setRunning] = useState(false);
-  const [postVisible, setPostVisible] = useState(false);
+  const [done, setDone] = useState(false);
   const [postOpen, setPostOpen] = useState(false);
   const firedRef = useRef(false);
 
+  // Listen for the animation's completion signal + safety fallback.
   useEffect(() => {
-    const runTimer = window.setTimeout(() => setRunning(true), 60);
-    const postTimer = window.setTimeout(() => setPostVisible(true), 2500);
-    const openTimer = window.setTimeout(() => setPostOpen(true), 3200);
+    const onMessage = (e: MessageEvent) => {
+      const m = e.data;
+      if (m === 'gift-done' || (m && typeof m === 'object' && m.type === 'gift-done')) {
+        setDone(true);
+      }
+    };
+    window.addEventListener('message', onMessage);
+    const fallback = window.setTimeout(() => setDone(true), 6500);
+    return () => {
+      window.removeEventListener('message', onMessage);
+      window.clearTimeout(fallback);
+    };
+  }, []);
+
+  // Prize card sequence, once the animation is done.
+  useEffect(() => {
+    if (!done) return;
+    const openTimer = window.setTimeout(() => setPostOpen(true), 700);
     const doneTimer = window.setTimeout(() => {
       if (!firedRef.current) {
         firedRef.current = true;
         onComplete();
       }
-    }, 5400);
+    }, 2500);
     return () => {
-      window.clearTimeout(runTimer);
-      window.clearTimeout(postTimer);
       window.clearTimeout(openTimer);
       window.clearTimeout(doneTimer);
     };
-  }, [onComplete]);
-
-  const bg = { backgroundImage: `url(${ASSETS.giftClosed})` };
+  }, [done, onComplete]);
 
   return (
     <div className="gift-screen">
-      <div className={`gift-stage${running ? ' run' : ''}`} role="img" aria-label="Animated gift box opening">
-        <div className="gift-part gift-body" style={bg} />
-        <div className="gift-part gift-lid" style={bg} />
-      </div>
+      <iframe
+        className="gift-iframe"
+        src="assets/gift-animation.html"
+        title="Gift animation"
+        scrolling="no"
+      />
 
-      {postVisible && (
+      {done && (
         <div className={`gift-post-wrap${postOpen ? ' open' : ''}`}>
           <div className="gift-post-sealed">
             <span aria-hidden>🔏</span>

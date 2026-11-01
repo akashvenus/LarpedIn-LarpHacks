@@ -4,7 +4,8 @@ import { DemoEvent, PromptId, PROMPTS } from '../domain/types';
 export interface CameraGuideProps {
   event: DemoEvent;
   completedPrompts: PromptId[];
-  photoUrl: string | null;
+  /** One object URL per prompt (null = not captured yet). */
+  photos: Record<PromptId, string | null>;
   onCapture: (blob: Blob, promptId: PromptId) => void;
   onCheck: (promptId: PromptId) => void;
   onContinue: () => void;
@@ -19,19 +20,20 @@ type CamStatus =
   | { kind: 'error'; message: string };
 
 /**
- * Event photo guide (F2): live getUserMedia preview, exactly one real
- * capture (credited to the chosen prompt), three manually checked
- * prompts, thumbnail, and continue only when all four are complete.
+ * Event photo guide (F2). Each of the four prompts has its own 📷 snap
+ * button against the shared live preview; a re-snap overwrites that
+ * prompt's photo. A small "check without photo" fallback and an
+ * always-available continue (skip photos) keep the demo unblockable.
  *
- * - Tracks are stopped on unmount.
- * - Failures are classified (denied / no camera / insecure context /
- *   other) with a clear explanation and a retry where one makes sense.
- * - The photo is a device-local Blob; never persisted or uploaded.
+ * - The camera stays live for the whole screen; tracks stop on unmount.
+ * - Failures are classified (denied / no camera / insecure / other) with
+ *   a clear explanation and retry where it makes sense.
+ * - Photos are device-local Blobs; never persisted or uploaded.
  */
 export function CameraGuide({
   event,
   completedPrompts,
-  photoUrl,
+  photos,
   onCapture,
   onCheck,
   onContinue,
@@ -39,8 +41,6 @@ export function CameraGuide({
   const videoRef = useRef<HTMLVideoElement>(null);
   const streamRef = useRef<MediaStream | null>(null);
   const [status, setStatus] = useState<CamStatus>({ kind: 'starting' });
-  const [captureTarget, setCaptureTarget] = useState<PromptId>('room');
-  const [captured, setCaptured] = useState(photoUrl !== null);
 
   const stopStream = useCallback(() => {
     streamRef.current?.getTracks().forEach((t) => t.stop());
@@ -93,24 +93,27 @@ export function CameraGuide({
     return () => stopStream();
   }, [startCamera, stopStream]);
 
-  const handleCapture = useCallback(() => {
-    const video = videoRef.current;
-    if (!video || video.videoWidth === 0) return;
-    const canvas = document.createElement('canvas');
-    canvas.width = video.videoWidth;
-    canvas.height = video.videoHeight;
-    const ctx = canvas.getContext('2d');
-    if (!ctx) return;
-    ctx.drawImage(video, 0, 0);
-    canvas.toBlob((blob) => {
-      if (!blob) return;
-      stopStream();
-      setCaptured(true);
-      onCapture(blob, captureTarget);
-    }, 'image/png');
-  }, [captureTarget, onCapture, stopStream]);
+  /** Snap the current frame and credit it to the given prompt (overwrite on re-snap). */
+  const handleSnap = useCallback(
+    (promptId: PromptId) => {
+      const video = videoRef.current;
+      if (!video || video.videoWidth === 0) return;
+      const canvas = document.createElement('canvas');
+      canvas.width = video.videoWidth;
+      canvas.height = video.videoHeight;
+      const ctx = canvas.getContext('2d');
+      if (!ctx) return;
+      ctx.drawImage(video, 0, 0);
+      canvas.toBlob((blob) => {
+        if (!blob) return;
+        onCapture(blob, promptId);
+      }, 'image/png');
+    },
+    [onCapture],
+  );
 
-  const allComplete = completedPrompts.length === PROMPTS.length;
+  const doneCount = completedPrompts.length;
+  const allComplete = doneCount === PROMPTS.length;
   const live = status.kind === 'live';
 
   return (
@@ -118,7 +121,7 @@ export function CameraGuide({
       <header>
         <h1>{event.title} · Photo guide</h1>
         <p className="muted" style={{ margin: 0 }}>
-          {event.dateLabel} · {event.venueLabel} — one real capture counts; check off the rest.
+          {event.dateLabel} · {event.venueLabel} — snap one per checkpoint, or check / skip freely.
         </p>
       </header>
 
@@ -148,7 +151,7 @@ export function CameraGuide({
             <p>📷 No camera available</p>
             <p className="muted">
               No camera was found on this device (or it is in use by another app). Close other
-              camera apps and retry, or switch to a device with a camera.
+              camera apps and retry — or just check / skip the checkpoints below.
             </p>
             <button className="btn" onClick={() => void startCamera()}>
               Try again
@@ -160,7 +163,7 @@ export function CameraGuide({
             <p>🔒 Camera needs a secure connection</p>
             <p className="muted">
               Browsers only expose the camera over HTTPS (or localhost). Open the deployed URL, or
-              run the app locally, then reload.
+              run the app locally, then reload. Checkpoints can still be checked or skipped below.
             </p>
           </div>
         )}
@@ -173,44 +176,13 @@ export function CameraGuide({
             </button>
           </div>
         )}
-        {captured && photoUrl && (
-          <div className="cam-captured" role="img" aria-label="Captured photo thumbnail">
-            <img src={photoUrl} alt="Your captured photo" />
-          </div>
-        )}
-      </div>
-
-      <div className="cam-controls">
-        {!captured && live && (
-          <>
-            <div className="cam-target-row" aria-label="Which prompt this capture fulfills">
-              <span className="cam-target-label">Capture counts for:</span>
-              {PROMPTS.map((p) => (
-                <button
-                  key={p.id}
-                  className={`cam-chip${captureTarget === p.id ? ' on' : ''}`}
-                  onClick={() => setCaptureTarget(p.id)}
-                >
-                  {p.label}
-                </button>
-              ))}
-            </div>
-            <button className="btn btn-primary btn-block" onClick={handleCapture}>
-              📸 Capture photo
-            </button>
-          </>
-        )}
-        {captured && (
-          <p className="cam-captured-note">
-            ✅ One real photo captured. Check off the remaining prompts, then continue.
-          </p>
-        )}
       </div>
 
       <section className="card">
-        <h3>Photo checkpoints</h3>
+        <h3>Photo checkpoints · {doneCount}/4</h3>
         <ul className="prompt-list">
           {PROMPTS.map((p) => {
+            const photoUrl = photos[p.id];
             const done = completedPrompts.includes(p.id);
             return (
               <li key={p.id} className={`prompt-row${done ? ' done' : ''}`}>
@@ -218,23 +190,37 @@ export function CameraGuide({
                   <strong>{p.label}</strong>
                   <span className="muted">{p.hint}</span>
                 </div>
-                {done ? (
-                  <span className="prompt-check" aria-label={`${p.label} complete`}>
-                    ✓
-                  </span>
-                ) : (
-                  <button className="btn prompt-check-btn" onClick={() => onCheck(p.id)}>
-                    Check
+                <div className="prompt-actions">
+                  {photoUrl && (
+                    <img
+                      className="prompt-thumb"
+                      src={photoUrl}
+                      alt={`${p.label} capture`}
+                    />
+                  )}
+                  <button
+                    className="btn snap-btn"
+                    disabled={!live}
+                    title={photoUrl ? 'Snap again (replaces this photo)' : 'Snap a photo for this checkpoint'}
+                    onClick={() => handleSnap(p.id)}
+                  >
+                    📷 {photoUrl ? 'Re-snap' : 'Snap'}
                   </button>
-                )}
+                  {!done && (
+                    <button className="check-fallback" onClick={() => onCheck(p.id)}>
+                      check without photo
+                    </button>
+                  )}
+                  {done && <span className="prompt-check" aria-label={`${p.label} complete`}>✓</span>}
+                </div>
               </li>
             );
           })}
         </ul>
       </section>
 
-      <button className="btn btn-primary btn-block" disabled={!allComplete} onClick={onContinue}>
-        {allComplete ? 'Continue to post composer →' : `${completedPrompts.length}/4 checkpoints done`}
+      <button className="btn btn-primary btn-block" onClick={onContinue}>
+        {allComplete ? 'Continue to post composer →' : 'Continue (skip photos)'}
       </button>
     </>
   );

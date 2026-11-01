@@ -62,13 +62,12 @@ export function Dorm({
           </div>
         )}
         <div className="dorm-slot slot-avatar">
-          <img className="item" src={ASSETS.avatar} alt="You, in the dorm" />
+          <img
+            className="item"
+            src={micUnlocked ? ASSETS.avatarMic : ASSETS.avatar}
+            alt={micUnlocked ? 'You, holding your microphone' : 'You, in the dorm'}
+          />
         </div>
-        {micUnlocked && (
-          <div className="dorm-slot slot-mic">
-            <img className="item" src={ASSETS.mic} alt="Holdable microphone, unlocked" />
-          </div>
-        )}
       </div>
 
       <div className="dorm-cta-row">

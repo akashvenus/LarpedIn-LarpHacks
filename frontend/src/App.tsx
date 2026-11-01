@@ -8,7 +8,7 @@ import { PostComposer } from './components/PostComposer';
 import { SocialDemo } from './components/SocialDemo';
 import { Trophies } from './components/Trophies';
 import { demoReducer, initialState } from './domain/reducer';
-import { badgeUnlocked, derivedXp, giftEligible, lightsUnlocked, micUnlocked } from './domain/selectors';
+import { badgeUnlocked, derivedXp, giftEligible, lightsUnlocked, micUnlocked, photoList } from './domain/selectors';
 import { ComposerInput, DemoData, PromptId } from './domain/types';
 
 type Screen = 'dorm' | 'events' | 'camera' | 'trophies' | 'composer' | 'gift' | 'social';
@@ -101,6 +101,12 @@ export default function App() {
     dispatch({ type: 'PUBLISH_POST' });
   };
 
+  const handleComposed = (text: string) => {
+    dispatch({ type: 'SET_POST_TEXT', text });
+    // The LinkedIn mockup is now the publish surface (draft + Post button).
+    setScreen('social');
+  };
+
   return (
     <div className="app">
       {screen === 'dorm' && (
@@ -128,7 +134,7 @@ export default function App() {
           <CameraGuide
             event={selectedEvent}
             completedPrompts={state.completedPrompts}
-            photoUrl={state.photoUrl}
+            photos={state.photos}
             onCapture={handleCapture}
             onCheck={(promptId) => dispatch({ type: 'CHECK_PROMPT', promptId })}
             onContinue={() => setScreen('composer')}
@@ -158,12 +164,21 @@ export default function App() {
             event={selectedEvent}
             options={demo.composer}
             onCompose={handleCompose}
-            onPublish={handlePublish}
+            onComposed={handleComposed}
           />
         </div>
       )}
 
-      {screen === 'gift' && <GiftReveal onComplete={() => setScreen('social')} />}
+      {screen === 'gift' && (
+        <GiftReveal
+          onComplete={() => {
+            // One-shot: mark the gift open and trigger the automatic
+            // simulated recruiter message (idempotent reducer action).
+            dispatch({ type: 'GIFT_ANIMATION_DONE' });
+            setScreen('social');
+          }}
+        />
+      )}
 
       {screen === 'trophies' && (
         <Trophies
@@ -186,9 +201,11 @@ export default function App() {
             profile={demo.profile}
             recruiter={demo.recruiter}
             postText={state.postText}
-            photoUrl={state.photoUrl}
+            photos={photoList(state)}
             outreachMessage={demo.outreachMessage}
             outreachSent={state.outreachSent}
+            published={state.postPublished}
+            onPublish={handlePublish}
           />
         </div>
       )}

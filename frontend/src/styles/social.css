@@ -10,111 +10,19 @@
   gap: 18px;
   padding: 32px 8px;
 }
+/* ---------- Gift: drop-in animation iframe (F3) ----------
+ * The animation itself lives in public/assets/gift-animation.html
+ * (Spencer's self-contained file). It signals completion with
+ * postMessage({type:'gift-done'}); GiftReveal also has a fallback
+ * timer. Style the frame here only.
+ * ---------------------------------------------------------------- */
 
-/* ---------- Gift: lid-off + fade (TUNE BELOW) ----------
- *
- * The closed gift image is split into two CSS layers of the SAME file:
- *   .gift-lid  = top 42% of the image (lid + bow)
- *   .gift-body = bottom 58% of the image
- * Sequence (started when the .run class lands):
- *   idle wiggle -> lid lifts off and drifts away -> box fades out.
- * All knobs are CSS variables; the keyframes are the TUNABLE BLOCK
- * that may be re-cut (e.g. by ChatGPT) without touching components.
- * -------------------------------------------------------- */
-
-.gift-stage {
-  position: relative;
-  width: 170px;
-  height: 170px;
-  --lid-h: 42%;              /* where the lid cut sits in the image */
-  --wiggle-delay: 0s;        /* start of the idle wiggle            */
-  --wiggle-dur: 0.7s;        /* wiggle before the lid lets go       */
-  --lid-delay: 0.7s;         /* lid starts lifting                   */
-  --lid-dur: 1.3s;           /* lid flight duration                  */
-  --fade-delay: 2.0s;        /* box fade starts                      */
-  --fade-dur: 0.5s;          /* box fade duration                    */
-}
-
-.gift-part {
-  position: absolute;
-  left: 0;
-  width: 100%;
-  background-repeat: no-repeat;
-  background-size: 100% auto;
-}
-
-.gift-body {
-  top: var(--lid-h);
-  height: calc(100% - var(--lid-h));
-  background-position: 0 100%;
-}
-
-.gift-lid {
-  top: 0;
-  height: var(--lid-h);
-  background-position: 0 0;
-}
-
-.gift-stage.run .gift-lid,
-.gift-stage.run .gift-body {
-  animation:
-    gift-wiggle var(--wiggle-dur) ease-in-out var(--wiggle-delay) both,
-    gift-lid-off var(--lid-dur) cubic-bezier(0.34, 1.2, 0.64, 1) var(--lid-delay) both;
-}
-
-.gift-stage.run .gift-body {
-  animation:
-    gift-wiggle var(--wiggle-dur) ease-in-out var(--wiggle-delay) both,
-    gift-fade-out var(--fade-dur) ease var(--fade-delay) both;
-}
-
-/* ---- TUNABLE BLOCK: gift animation keyframes ---- */
-
-@keyframes gift-wiggle {
-  0%, 100% { transform: rotate(0deg); }
-  25% { transform: rotate(-3deg); }
-  50% { transform: rotate(3deg); }
-  75% { transform: rotate(-2deg); }
-}
-
-@keyframes gift-lid-off {
-  0% { transform: translateY(0) rotate(0deg); opacity: 1; }
-  20% { transform: translateY(5px) rotate(2deg); }
-  60% { transform: translateY(-120px) rotate(-14deg); opacity: 1; }
-  100% { transform: translateY(-160px) rotate(-20deg); opacity: 0; }
-}
-
-@keyframes gift-fade-out {
-  0% { opacity: 1; transform: translateY(0) scale(1); }
-  100% { opacity: 0; transform: translateY(10px) scale(0.95); }
-}
-
-/* ---- end TUNABLE BLOCK ---- */
-
-.gift-glow {
-  position: absolute;
-  inset: -24px;
-  border-radius: 50%;
-  background: radial-gradient(circle, rgba(255, 209, 102, 0.5), transparent 70%);
-  animation: glow-in 0.6s ease both;
-  pointer-events: none;
-}
-
-@keyframes glow-in {
-  from { opacity: 0; transform: scale(0.6); }
-  to { opacity: 1; transform: scale(1); }
-}
-
-.gift-copy {
-  opacity: 0;
-  transform: translateY(14px);
-  transition: opacity 0.5s ease, transform 0.5s ease;
-  max-width: 340px;
-}
-
-.gift-copy.show {
-  opacity: 1;
-  transform: translateY(0);
+.gift-iframe {
+  width: min(340px, calc(100vw - 48px));
+  height: 440px;
+  border: none;
+  border-radius: 18px;
+  background: #15151b;
 }
 
 .prize-row {
@@ -447,4 +355,27 @@
   font-size: 14px;
   line-height: 1.5;
   margin-bottom: 10px;
+}
+
+/* ---------- Post photos (draft + feed) ---------- */
+
+.photo-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 8px;
+}
+
+.photo-grid img {
+  width: 100%;
+  aspect-ratio: 4 / 3;
+  object-fit: cover;
+  border-radius: 10px;
+  border: 1px solid var(--line);
+  display: block;
+}
+
+@media (max-width: 374px) {
+  .photo-grid {
+    gap: 6px;
+  }
 }

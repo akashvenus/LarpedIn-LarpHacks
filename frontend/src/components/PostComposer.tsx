@@ -11,26 +11,27 @@ export interface PostComposerProps {
   };
   /** Calls POST /api/compose; resolves with the assembled text. */
   onCompose: (input: ComposerInput) => Promise<string>;
-  /** Receives the final edited text. */
-  onPublish: (text: string) => void;
+  /** Fired once the post is composed — the LinkedIn mockup takes over
+   *  as the publish surface (draft post + Post button). */
+  onComposed: (text: string) => void;
 }
 
-type Phase = 'choose' | 'composing' | 'preview';
+type Phase = 'choose' | 'composing';
 
 /**
  * MadLibs post composer (F3). Order per UX review: 1) the selected
  * event (shown, not just data), 2) hook, 3) exactly three distinct
  * learnings, 4) conclusion, 5) 1–3 hashtags. "AI take the wheel"
- * prefills a deterministic curated preset. The assembled text is
- * editable before publishing via onPublish. No typing required.
+ * prefills a deterministic curated preset. No typing required; there is
+ * no editable field — the composed post is previewed and published in
+ * the LinkedIn mockup.
  */
-export function PostComposer({ event, options, onCompose, onPublish }: PostComposerProps) {
+export function PostComposer({ event, options, onCompose, onComposed }: PostComposerProps) {
   const [hookId, setHookId] = useState<string | null>(null);
   const [learningIds, setLearningIds] = useState<string[]>([]);
   const [conclusionId, setConclusionId] = useState<string | null>(null);
   const [hashtagIds, setHashtagIds] = useState<string[]>([]);
   const [phase, setPhase] = useState<Phase>('choose');
-  const [previewText, setPreviewText] = useState('');
   const [error, setError] = useState<string | null>(null);
 
   const readyToCompose =
@@ -70,8 +71,7 @@ export function PostComposer({ event, options, onCompose, onPublish }: PostCompo
         hashtagIds,
       };
       const text = await onCompose(input);
-      setPreviewText(text);
-      setPhase('preview');
+      onComposed(text);
     } catch (err) {
       setPhase('choose');
       setError(err instanceof Error ? err.message : 'Compose failed.');
@@ -176,25 +176,6 @@ export function PostComposer({ event, options, onCompose, onPublish }: PostCompo
         </button>
       </div>
       {error && <p className="form-error">⚠️ {error}</p>}
-
-      {phase === 'preview' && (
-        <section className="card preview-card">
-          <h3>Preview · edit anything, then publish</h3>
-          <textarea
-            className="preview-text"
-            value={previewText}
-            onChange={(e) => setPreviewText(e.target.value)}
-            aria-label="Editable post preview"
-          />
-          <button
-            className="btn btn-primary btn-block"
-            disabled={!previewText.trim()}
-            onClick={() => onPublish(previewText)}
-          >
-            📤 Publish to feed · +40 XP
-          </button>
-        </section>
-      )}
     </div>
   );
 }

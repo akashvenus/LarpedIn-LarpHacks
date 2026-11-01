@@ -1,4 +1,4 @@
-import { DemoState } from './types';
+import { DemoState, PhotoRef, PROMPTS } from './types';
 
 /**
  * Derived values. XP is computed from state flags — never independently
@@ -13,8 +13,22 @@ export function derivedXp(state: DemoState): number {
   return Math.min(100, total);
 }
 
+/** True when at least one prompt has a real capture. */
+export function anyPhoto(state: DemoState): boolean {
+  return PROMPTS.some((p) => state.photos[p.id] !== null);
+}
+
+/** Captured photos in fixed prompt order (room → selfie → banner → handshake). */
+export function photoList(state: DemoState): PhotoRef[] {
+  return PROMPTS.filter((p) => state.photos[p.id] !== null).map((p) => ({
+    promptId: p.id,
+    url: state.photos[p.id] as string,
+  }));
+}
+
+/** Mic (equippable) unlocks on the first real capture. */
 export function micUnlocked(state: DemoState): boolean {
-  return state.capturedPromptId !== null;
+  return anyPhoto(state);
 }
 
 export function lightsUnlocked(state: DemoState): boolean {
@@ -26,16 +40,10 @@ export function badgeUnlocked(state: DemoState): boolean {
 }
 
 /**
- * Gift gating uses required task flags, not XP alone: an event must be
- * selected, a real photo must exist, all four prompts must be complete,
- * and the post must be published. Stand-up XP alone can never open it.
+ * Gift gating (contract revision 2026-11-01): event selected + post
+ * published. Photos are skippable — the demo is lighthearted, no hard
+ * blockers. Stand-up XP alone still cannot open it.
  */
 export function giftEligible(state: DemoState): boolean {
-  return (
-    state.eventId !== null &&
-    state.photoUrl !== null &&
-    state.capturedPromptId !== null &&
-    state.completedPrompts.length === 4 &&
-    state.postPublished
-  );
+  return state.eventId !== null && state.postPublished;
 }

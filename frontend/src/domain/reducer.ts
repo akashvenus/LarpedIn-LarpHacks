@@ -23,34 +23,21 @@ export function demoReducer(state: DemoState, action: DemoAction): DemoState {
       return { ...state, eventId: action.eventId };
 
     case 'CAPTURE': {
-      // Idempotent: re-capturing the same already-completed prompt is a no-op.
-      if (
-        state.capturedPromptId === action.promptId &&
-        state.completedPrompts.includes(action.promptId)
-      ) {
-        return state;
-      }
+      // One capture per prompt; re-snap revokes the old object URL and
+      // overwrites. XP is derived from completedPrompts (a set), so
+      // repeated snaps can never add XP twice.
+      const prevUrl = state.photos[action.promptId];
+      if (prevUrl) URL.revokeObjectURL(prevUrl);
       const completed = state.completedPrompts.includes(action.promptId)
         ? state.completedPrompts
         : [...state.completedPrompts, action.promptId];
-      if (state.photoUrl) URL.revokeObjectURL(state.photoUrl);
       return {
         ...state,
         completedPrompts: completed,
-        capturedPromptId: action.promptId,
-        photoUrl: URL.createObjectURL(action.blob),
-      };
-    }
-
-    case 'REVOKE_PHOTO': {
-      if (!state.photoUrl || !state.capturedPromptId) return state;
-      URL.revokeObjectURL(state.photoUrl);
-      const released = state.capturedPromptId;
-      return {
-        ...state,
-        photoUrl: null,
-        capturedPromptId: null,
-        completedPrompts: state.completedPrompts.filter((p) => p !== released),
+        photos: {
+          ...state.photos,
+          [action.promptId]: URL.createObjectURL(action.blob),
+        },
       };
     }
 

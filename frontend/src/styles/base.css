@@ -340,21 +340,6 @@ h2 {
   aspect-ratio: 7 / 10;
 }
 
-.slot-mic {
-  right: 9%;
-  bottom: 6%;
-  width: 15%;
-  aspect-ratio: 1 / 1;
-}
-
-/* The mic placeholder is a product shot on white with no alpha; multiply
-   dissolves the white box against the bright room. Replace with a
-   transparent PNG later and this rule becomes harmless. */
-.slot-mic .item {
-  mix-blend-mode: multiply;
-  filter: none;
-}
-
 .slot-lights {
   left: 38%;
   top: 37%;

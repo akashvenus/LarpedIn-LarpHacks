@@ -1,6 +1,6 @@
 # LarpedIn — one-day build specification
 
-**Status:** Locked implementation contract. **Target:** a complete mobile-web judge demo before the LarpHacks 6 p.m. project deadline on November 1, 2026. The [event page](https://luma.com/irn5abpa) and [Devpost](https://larphacks.devpost.com/) are the deadline sources. Begin from this contract rather than broad feature prompts.
+**Status:** Locked implementation contract, **revised 2026-11-01** (frontend-driven): per-prompt photo snaps with overwrite, check-without-photo and skip-photos paths, publish step moved into the simulated social app (no editable field), gift gate relaxed to event + published post, drop-in gift animation HTML in an iframe. This is a contract revision to announce; the backend is unaffected (no photo uploads; `/api/compose` unchanged). **Target:** a complete mobile-web judge demo before the LarpHacks 6 p.m. project deadline on November 1, 2026. The [event page](https://luma.com/irn5abpa) and [Devpost](https://larphacks.devpost.com/) are the deadline sources. Begin from this contract rather than broad feature prompts.
 
 ## 1. Product promise and demo path
 
@@ -8,10 +8,10 @@ LarpedIn is an affectionate satire of first-year CS career optimization. A judge
 
 1. See a bare first-year dorm, avatar, and internship progress bar. Optionally fill a two-bullet daily stand-up.
 2. Open **Suggested events**, select featured **LarpHacks**, and optionally open its real [Luma page](https://luma.com/irn5abpa) in a new tab.
-3. Enter the event guide. See four prompts: full-room shot, selfie, event banner, handshake. Allow one prompt to be fulfilled by an actual live-camera capture; the other three can be checked off. Show the captured image as a thumbnail.
-4. Use a MadLibs post composer: pick a cliché hook, event, three distinct learnings, conclusion, and one to three hashtags. **AI take the wheel** fills the choices from a curated preset. Let the user edit the assembled text and publish it inside the app.
-5. Show the progress bar reach 100, a badge, a holdable mic, and RGB lights in the dorm. Automatically animate a gift box and reveal a profile-photo and message-icon prize labeled **Free recruiter message**.
-6. Automatically transition to a visibly labeled, simulated LinkedIn-like app. Its feed shows the post and captured photo; its inbox animates a prewritten message sending to one fictional recruiter. No send click and no external message.
+3. Enter the event guide. See four prompts: full-room shot, selfie, event banner, handshake. Each prompt has its own snap button against the shared live-camera preview; a re-snap overwrites that prompt's photo. Each prompt can also be checked without a photo, and the continue action is always available (skip photos), so the camera can never block the demo.
+4. Use a MadLibs post composer: the selected event is shown first, then pick a cliché hook, three distinct learnings, a conclusion, and one to three hashtags. **AI take the wheel** fills the choices from a curated preset. There is no editable field: the composed post goes straight to the simulated social app as a draft.
+5. Show the progress bar reach 100, a badge, a held mic on the avatar, and RGB lights in the dorm. Automatically play the animated gift box (drop-in `public/assets/gift-animation.html`, rendered in an iframe and signaling `postMessage({type:'gift-done'})`) and reveal a profile-photo and message-icon prize labeled **Free recruiter message**.
+6. In the visibly labeled, simulated LinkedIn-like app, the draft shows the composed post plus all captured photos (fixed order: room, selfie, banner, handshake). A single **Post** button publishes it. After the gift, the same simulation's feed shows the post and photos, and its inbox animates a prewritten message sending to one fictional recruiter. No external message; the only send action is the demo's own Post button.
 
 The demo is session-only: **refresh starts over**, including camera image, post, XP, cosmetics, and simulated message. Navigation inside the single-page app preserves state. No accounts, database, actual LinkedIn integration, live AI, news retrieval, Luma API, location detection, or push notifications are in the first build.
 
@@ -19,13 +19,13 @@ The demo is session-only: **refresh starts over**, including camera image, post,
 
 | Screen | Required behavior | Owner |
 | --- | --- | --- |
-| Dorm | Bare room backdrop, avatar, 0–100 internship bar, equipped mic and placed RGB lights when earned, event CTA, optional two-bullet stand-up, four-item dock | Spencer |
+| Dorm | Room backdrop, avatar (holding the mic once earned), 0–100 internship bar, placed RGB lights when earned, event CTA, optional two-bullet stand-up, four-item dock | Spencer |
 | Events | Three cards under “Suggested events”; LarpHacks featured; each card has **Select event** and **Open on Luma** actions | Spencer; content from Andrew |
-| Camera guide | Four prompts, live preview from `getUserMedia`, one real capture, thumbnail, three remaining checkboxes, continue action when all four complete | Spencer |
-| Post composer | Choice controls, deterministic **AI take the wheel**, assembled editable preview, publish action | Spencer; compose API from Akash |
-| Trophies | One badge, locked until all four photo prompts are complete | Spencer |
-| Gift | Automatically opens after all guided tasks; shows the two prize icons and description; automatically advances to simulation | Spencer |
-| Simulated social app | Seeded profile, feed containing published post and photo, inbox containing automatic fictional recruiter message; visible “Demo simulation” label | Spencer |
+| Camera guide | Four prompts, shared live preview from `getUserMedia`, a snap button per prompt (re-snap overwrites that prompt's photo, shown as a per-row thumbnail), check-without-photo fallback, always-available continue (skip photos) | Spencer |
+| Post composer | Event card first, then choice controls, deterministic **AI take the wheel**, compose action (no editable field) | Spencer; compose API from Akash |
+| Trophies | One badge (all four photo prompts complete) plus a dorm shelf showing mic, RGB lights, and stand-up status | Spencer |
+| Gift | IFrame of the drop-in animation auto-plays after event + published post; then a sealed “Free recruiter message post” card opens (title kept); automatically advances to simulation | Spencer |
+| Simulated social app | Visible “Demo simulation” label, seeded profile; pre-publish: draft post with all captured photos and a **Post** button (the publish surface); post-publish: feed containing the post and photos, inbox with the automatic fictional recruiter message | Spencer |
 
 Dock: **Dorm · Events · Camera · Trophies**. The composer is reached from the camera guide; the simulated social screen is reached from the prize. The camera dock opens the selected event guide, or asks the user to choose an event if none is selected.
 
@@ -77,8 +77,7 @@ Andrew owns a pure frontend state module; Spencer's components dispatch its acti
 type DemoState = {
   eventId: string | null;
   completedPrompts: string[]; // room, selfie, banner, handshake
-  capturedPromptId: string | null;
-  photoUrl: string | null; // object URL; kept only in memory
+  photos: Record<PromptId, string | null>; // object URL per prompt; kept only in memory
   selections: {
     hookId: string | null;
     learningIds: string[];
@@ -93,7 +92,7 @@ type DemoState = {
 };
 ```
 
-XP is derived, not independently mutated: 20 for selecting an event, 10 for each of four completed photo prompts, 40 for publishing the post, and 5 once for the optional stand-up; display `min(100, total)`. The captured photo completes its selected prompt. The gift opens only when an event is selected, a real photo exists, all four prompts are complete, and the post is published. Thus optional stand-up XP alone can never trigger it. The mic unlocks on actual capture; RGB lights unlock on publishing; the badge unlocks when all four prompts are complete. An animation completion callback transitions from gift to simulated inbox and sets `outreachSent` automatically. Do not use browser storage.
+XP is derived, not independently mutated: 20 for selecting an event, 10 for each of four completed photo prompts, 40 for publishing the post, and 5 once for the optional stand-up; display `min(100, total)`. A snap (or a check-without-photo) completes its prompt; re-snapping overwrites that prompt's photo and adds no XP. The gift opens when an event is selected and the post is published — photo prompts are skippable, so the camera never blocks the prize; optional stand-up XP alone can never trigger it. The mic (equippable, held by the avatar) unlocks on the first actual capture; RGB lights unlock on publishing; the badge unlocks when all four prompts are complete. An animation completion callback transitions from gift to simulated inbox and sets `outreachSent` automatically. Do not use browser storage.
 
 ## 6. Visual and interaction contract
 

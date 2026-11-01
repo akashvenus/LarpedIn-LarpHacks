@@ -2,8 +2,12 @@
  * Shared types for the LarpedIn demo session.
  *
  * Note: `frontend/src/domain/*` is Andrew's (I2) ownership area. This file
- * implements his locked spec exactly so F1 can run; when his I2 commit lands
+ * implements the agreed contract so F1 can run; when his I2 commit lands
  * in integration, his version of this directory should win wholesale.
+ *
+ * Contract revision (2026-11-01, announced to Andrew): per-prompt photos
+ * map (one capture per prompt, re-snap overwrites), no single photoUrl,
+ * gift gate = event selected + post published (photos skippable).
  */
 
 export type PromptId = 'room' | 'selfie' | 'banner' | 'handshake';
@@ -52,12 +56,19 @@ export interface DemoData {
   outreachMessage: string;
 }
 
+export interface PhotoRef {
+  promptId: PromptId;
+  url: string;
+}
+
 export interface DemoState {
   eventId: string | null;
   completedPrompts: PromptId[];
-  capturedPromptId: PromptId | null;
-  /** Object URL held only in memory; never persisted or uploaded. */
-  photoUrl: string | null;
+  /**
+   * Object URL per prompt, held only in memory. One capture per prompt;
+   * a re-snap revokes the old URL and overwrites. Never persisted/uploaded.
+   */
+  photos: Record<PromptId, string | null>;
   selections: {
     hookId: string | null;
     learningIds: string[];
@@ -76,7 +87,6 @@ export interface DemoState {
 export type DemoAction =
   | { type: 'SELECT_EVENT'; eventId: string }
   | { type: 'CAPTURE'; blob: Blob; promptId: PromptId }
-  | { type: 'REVOKE_PHOTO' }
   | { type: 'CHECK_PROMPT'; promptId: PromptId }
   | { type: 'SET_HOOK'; hookId: string }
   | { type: 'TOGGLE_LEARNING'; learningId: string }
@@ -91,8 +101,7 @@ export type DemoAction =
 export const initialState: DemoState = {
   eventId: null,
   completedPrompts: [],
-  capturedPromptId: null,
-  photoUrl: null,
+  photos: { room: null, selfie: null, banner: null, handshake: null },
   selections: { hookId: null, learningIds: [], conclusionId: null, hashtagIds: [] },
   postText: '',
   postPublished: false,
