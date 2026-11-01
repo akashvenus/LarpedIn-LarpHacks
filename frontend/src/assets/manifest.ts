@@ -5,7 +5,11 @@ export type AssetName =
   | 'mic'
   | 'rgbLights'
   | 'giftClosed'
-  | 'giftOpen';
+  | 'giftOpen'
+  | 'startupStickers'
+  | 'founderPoster'
+  | 'googleMug'
+  | 'mousepad';
 
 export const ASSETS: Record<AssetName, string> = {
   dormBackground: 'assets/dorm-background.jpg',
@@ -15,4 +19,8 @@ export const ASSETS: Record<AssetName, string> = {
   rgbLights: 'assets/rgb-lights.svg',
   giftClosed: 'assets/gift-closed.svg',
   giftOpen: 'assets/gift-open.svg',
+  startupStickers: 'assets/startup-stickers.png',
+  founderPoster: 'assets/sam-altman-poster.png',
+  googleMug: 'assets/google-mug.png',
+  mousepad: 'assets/mousepad.png',
 };

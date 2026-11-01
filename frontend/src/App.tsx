@@ -8,7 +8,7 @@ import { PostComposer } from './components/PostComposer';
 import { SocialDemo } from './components/SocialDemo';
 import { Trophies } from './components/Trophies';
 import { demoReducer, initialState } from './domain/reducer';
-import { badgeUnlocked, derivedXp, giftEligible, lightsUnlocked, micUnlocked, photoList } from './domain/selectors';
+import { badgeUnlocked, derivedXp, giftEligible, lightsUnlocked, micUnlocked, photoList, unlockedItemIds } from './domain/selectors';
 import { ComposerInput, DemoData, PromptId } from './domain/types';
 
 type Screen = 'dorm' | 'events' | 'camera' | 'trophies' | 'composer' | 'gift' | 'social';
@@ -118,6 +118,10 @@ export default function App() {
           standUpBullets={state.standUpBullets}
           onSubmitStandUp={(b1, b2) => dispatch({ type: 'SUBMIT_STAND_UP', bullet1: b1, bullet2: b2 })}
           onFindEvent={() => setScreen('events')}
+          unlockedItemIds={unlockedItemIds(state)}
+          placements={state.placements}
+          onPlaceItem={(itemId, spotId) => dispatch({ type: 'PLACE_ITEM', itemId, spotId })}
+          onRemoveItem={(spotId) => dispatch({ type: 'REMOVE_ITEM', spotId })}
         />
       )}
 

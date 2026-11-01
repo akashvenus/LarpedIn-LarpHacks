@@ -1,5 +1,6 @@
 import { useState } from 'react';
-import { ASSETS } from '../assets/manifest';
+import { ItemId, SpotId } from '../domain/items';
+import { DormScene } from './room/DormScene';
 
 export interface DormProps {
   xp: number;
@@ -9,11 +10,15 @@ export interface DormProps {
   standUpBullets: { bullet1: string; bullet2: string } | null;
   onSubmitStandUp: (bullet1: string, bullet2: string) => void;
   onFindEvent: () => void;
+  unlockedItemIds: ItemId[];
+  placements: Partial<Record<SpotId, ItemId>>;
+  onPlaceItem: (itemId: ItemId, spotId: SpotId) => void;
+  onRemoveItem: (spotId: SpotId) => void;
 }
 
 /**
- * Dorm screen (F1): backdrop, avatar, internship XP bar, unlockable
- * cosmetics in fixed slots, event CTA, and the optional two-bullet
+ * Dorm screen (F1): internship XP bar, walkable room with unlockable
+ * cosmetics, event CTA, and the optional two-bullet
  * stand-up (+5 XP, can never unlock the gift on its own). The completed
  * stand-up keeps its content for the rest of the session.
  */
@@ -25,17 +30,19 @@ export function Dorm({
   standUpBullets,
   onSubmitStandUp,
   onFindEvent,
+  unlockedItemIds,
+  placements,
+  onPlaceItem,
+  onRemoveItem,
 }: DormProps) {
   const [bullet1, setBullet1] = useState('');
   const [bullet2, setBullet2] = useState('');
+  const [isStandUpOpen, setIsStandUpOpen] = useState(false);
 
   return (
     <>
-      <header>
+      <header className="dorm-header">
         <h1>LarpedIn</h1>
-        <p className="muted" style={{ margin: '0 0 12px' }}>
-          Your internship sim. Photo ops → post → prize.
-        </p>
         <div className="card xp-wrap">
           <div className="xp-row">
             <span>Internship progress</span>
@@ -54,29 +61,30 @@ export function Dorm({
         </div>
       </header>
 
-      <div className="dorm-scene" aria-label="Your dorm room">
-        <img className="dorm-bg" src={ASSETS.dormBackground} alt="" />
-        {lightsUnlocked && (
-          <div className="dorm-slot slot-lights">
-            <img className="item" src={ASSETS.rgbLights} alt="RGB lights, unlocked" />
-          </div>
-        )}
-        <div className="dorm-slot slot-avatar">
-          <img
-            className="item"
-            src={micUnlocked ? ASSETS.avatarMic : ASSETS.avatar}
-            alt={micUnlocked ? 'You, holding your microphone' : 'You, in the dorm'}
-          />
-        </div>
-      </div>
+      <DormScene
+        micUnlocked={micUnlocked}
+        lightsUnlocked={lightsUnlocked}
+        unlockedItemIds={unlockedItemIds}
+        placements={placements}
+        onPlaceItem={onPlaceItem}
+        onRemoveItem={onRemoveItem}
+      />
 
       <div className="dorm-cta-row">
         <button className="btn btn-primary" onClick={onFindEvent}>
           📅 Find an event
         </button>
+        <button
+          className="btn"
+          aria-expanded={isStandUpOpen}
+          aria-controls="dorm-standup"
+          onClick={() => setIsStandUpOpen((open) => !open)}
+        >
+          {standUpSubmitted ? '✅ Stand-up' : '📝 Stand-up +5 XP'}
+        </button>
       </div>
 
-      <section className="card">
+      <section className="card dorm-standup" id="dorm-standup" hidden={!isStandUpOpen}>
         <h3>Daily stand-up · +5 XP (optional)</h3>
         {standUpSubmitted ? (
           <div className="standup-logged">

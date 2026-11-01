@@ -10,6 +10,8 @@
  * gift gate = event selected + post published (photos skippable).
  */
 
+import { ItemId, SpotId } from './items';
+
 export type PromptId = 'room' | 'selfie' | 'banner' | 'handshake';
 
 export const PROMPTS: { id: PromptId; label: string; hint: string }[] = [
@@ -82,6 +84,8 @@ export interface DemoState {
   standUpBullets: { bullet1: string; bullet2: string } | null;
   giftOpened: boolean;
   outreachSent: boolean;
+  /** Which item sits in each dorm spot. An item occupies at most one spot. */
+  placements: Partial<Record<SpotId, ItemId>>;
 }
 
 export type DemoAction =
@@ -96,7 +100,9 @@ export type DemoAction =
   | { type: 'SET_POST_TEXT'; text: string }
   | { type: 'PUBLISH_POST' }
   | { type: 'SUBMIT_STAND_UP'; bullet1: string; bullet2: string }
-  | { type: 'GIFT_ANIMATION_DONE' };
+  | { type: 'GIFT_ANIMATION_DONE' }
+  | { type: 'PLACE_ITEM'; itemId: ItemId; spotId: SpotId }
+  | { type: 'REMOVE_ITEM'; spotId: SpotId };
 
 export const initialState: DemoState = {
   eventId: null,
@@ -109,4 +115,5 @@ export const initialState: DemoState = {
   standUpBullets: null,
   giftOpened: false,
   outreachSent: false,
+  placements: {},
 };

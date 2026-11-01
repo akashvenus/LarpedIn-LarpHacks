@@ -1,3 +1,4 @@
+import { ItemId, ITEMS } from './items';
 import { DemoState, PhotoRef, PROMPTS } from './types';
 
 /**
@@ -33,6 +34,18 @@ export function micUnlocked(state: DemoState): boolean {
 
 export function lightsUnlocked(state: DemoState): boolean {
   return state.postPublished;
+}
+
+const ITEM_UNLOCKS: Record<ItemId, (state: DemoState) => boolean> = {
+  stickers: () => true,
+  poster: (state) => state.eventId !== null,
+  mug: (state) => state.standUpSubmitted,
+  mousepad: (state) => state.postPublished,
+};
+
+/** Items available in the dorm box. Derived from progress, so they cannot be lost. */
+export function unlockedItemIds(state: DemoState): ItemId[] {
+  return ITEMS.filter((item) => ITEM_UNLOCKS[item.id](state)).map((item) => item.id);
 }
 
 export function badgeUnlocked(state: DemoState): boolean {
