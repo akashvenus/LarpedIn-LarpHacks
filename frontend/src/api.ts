@@ -1,5 +1,5 @@
 /// <reference types="vite/client" />
-import { AiPreset, CommunityPost, ComposerInput, DemoData, DemoState, StandUpPost } from './domain/types';
+import { AiPreset, CommunityPost, ComposerInput, DemoData, DemoState, PhotoRef, StandUpPost } from './domain/types';
 import { MOCK_DEMO } from './demo/mockDemo';
 
 /**
@@ -114,9 +114,9 @@ export function getBrowserClientId(): string {
   return clientId;
 }
 
-export async function saveBrowserPost(clientId: string, input: ComposerInput): Promise<string> {
+export async function saveBrowserPost(clientId: string, input: ComposerInput, photos: PhotoRef[]): Promise<string> {
   const res = await fetch(`${apiBase}/api/user-post/${encodeURIComponent(clientId)}`, {
-    method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(input),
+    method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ ...input, photos }),
   });
   const body = (await res.json().catch(() => null)) as { text?: string; detail?: string } | null;
   if (!res.ok || !body?.text) throw new ApiError(body?.detail || `Save post failed: ${res.status}`);

@@ -15,6 +15,7 @@ from .gemini import generate_preset
 from .models import (
     AiPresetRequest,
     AiPresetResponse,
+    BrowserPostRequest,
     ComposeRequest,
     ComposeResponse,
     DbHealthResponse,
@@ -172,10 +173,12 @@ def remove_user_post(request: Request):
 
 
 @app.put("/api/user-post/{client_id}", response_model=ComposeResponse)
-def put_browser_post(client_id: UUID, request: ComposeRequest):
+def put_browser_post(client_id: UUID, request: BrowserPostRequest):
     text = compose_from_request(request)
     try:
-        save_user_post(client_id, request.eventId, text, request.model_dump(mode="json"))
+        composer_input = request.model_dump(mode="json", exclude={"photos"})
+        photos = [photo.model_dump(mode="json") for photo in request.photos]
+        save_user_post(client_id, request.eventId, text, composer_input, photos)
     except DatabaseUnavailable:
         raise HTTPException(status_code=503, detail="Database unavailable")
     return {"text": text}

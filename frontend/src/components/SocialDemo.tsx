@@ -101,6 +101,13 @@ export function SocialDemo({
           </div>
           <p className="muted feed-time">Event · {item.post.eventId}</p>
           <p className="feed-text">{item.post.text}</p>
+          {item.post.photos?.length > 0 && (
+            <div className="photo-grid">
+              {item.post.photos.map((photo) => (
+                <img key={photo.promptId} src={photo.url} alt={`${photoAlt(photo.promptId)} — captured at the event`} />
+              ))}
+            </div>
+          )}
         </article>
       ))}
     </section>
