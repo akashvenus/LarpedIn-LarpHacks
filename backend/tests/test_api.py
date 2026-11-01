@@ -283,7 +283,8 @@ def test_public_feed_returns_all_posts_by_default(monkeypatch):
     posts = [
         {"id": i, "createdAt": "2026-11-01T12:00:00Z", "eventId": "larphacks",
          "hookId": "hook-1", "learningIds": ["learn-1", "learn-2", "learn-3"],
-         "conclusionId": "end-1", "hashtagIds": ["ai"], "text": f"Post {i}"}
+         "conclusionId": "end-1", "hashtagIds": ["ai"], "text": f"Post {i}",
+         "photos": [{"promptId": "selfie", "url": "data:image/png;base64,Zm9v"}]}
         for i in (3, 2, 1)
     ]
     monkeypatch.setattr(main, "list_posts", lambda limit=None: posts if limit is None else posts[:limit])
@@ -291,6 +292,7 @@ def test_public_feed_returns_all_posts_by_default(monkeypatch):
     response = client.get("/api/posts")
     assert response.status_code == 200
     assert [post["id"] for post in response.json()["posts"]] == [3, 2, 1]
+    assert response.json()["posts"][0]["photos"][0]["promptId"] == "selfie"
 
 
 def test_saved_progress_uses_forwarded_client_ip(monkeypatch):
@@ -444,8 +446,8 @@ def test_browser_posts_are_isolated_and_remain_compatible_with_ip_routes(monkeyp
     from app import main
     posts = {}
     states = {}
-    def save_post(client_id, event_id, text, composer_input):
-        posts[str(client_id)] = text
+    def save_post(client_id, event_id, text, composer_input, photos):
+        posts[str(client_id)] = {"text": text, "photos": photos}
     def delete_post(client_id):
         posts.pop(str(client_id), None)
     monkeypatch.setattr(main, 'save_user_post', save_post)
@@ -453,11 +455,13 @@ def test_browser_posts_are_isolated_and_remain_compatible_with_ip_routes(monkeyp
     monkeypatch.setattr(main, 'load_demo_state', lambda client_id: states.get(str(client_id)))
     first = '11111111-1111-4111-8111-111111111111'
     second = '22222222-2222-4222-8222-222222222222'
-    payload = {**good_payload(), 'format': 'personal', 'moment': 'first version'}
+    photos = [{"promptId": "selfie", "url": "data:image/png;base64,Zm9v"}]
+    payload = {**good_payload(), 'format': 'personal', 'moment': 'first version', 'photos': photos}
     assert client.put(f'/api/user-post/{first}', json=payload).status_code == 200
     assert client.put(f'/api/user-post/{second}', json=payload).status_code == 200
     assert client.put(f'/api/user-post/{first}', json={**payload, 'moment': 'replacement'}).status_code == 200
-    assert 'replacement' in posts[first] and 'first version' in posts[second]
+    assert 'replacement' in posts[first]["text"] and 'first version' in posts[second]["text"]
+    assert posts[first]["photos"] == photos
     assert client.delete(f'/api/user-post/{first}').status_code == 204
     assert first not in posts and second in posts
     assert client.get(f'/api/state/{first}').json() == {'state': None}

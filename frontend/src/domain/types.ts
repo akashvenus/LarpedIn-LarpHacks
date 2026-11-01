@@ -45,6 +45,7 @@ export interface CommunityPost {
   conclusionId: string;
   hashtagIds: string[];
   text: string;
+  photos: PhotoRef[];
 }
 
 export interface StandUpPost {
