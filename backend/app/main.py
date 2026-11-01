@@ -1,4 +1,5 @@
 from pathlib import Path
+from uuid import UUID
 
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
@@ -7,7 +8,7 @@ from fastapi.staticfiles import StaticFiles
 
 from .compose import compose_post
 from .content import CONCLUSIONS, DEMO, EVENTS, HASHTAGS, HOOKS, LEARNINGS
-from .db import DatabaseUnavailable, check_db, list_posts, save_post
+from .db import DatabaseUnavailable, check_db, list_posts, load_demo_state, save_demo_state, save_post
 from .gemini import generate_preset
 from .models import (
     AiPresetRequest,
@@ -15,6 +16,8 @@ from .models import (
     ComposeRequest,
     ComposeResponse,
     DbHealthResponse,
+    DemoStateResponse,
+    DemoStateWrite,
     PostListResponse,
     PostResponse,
 )
@@ -104,6 +107,24 @@ def db_health():
     except DatabaseUnavailable:
         raise HTTPException(status_code=503, detail="Database unavailable")
     return {"ok": True}
+
+
+@app.get("/api/state/{client_id}", response_model=DemoStateResponse)
+def get_demo_state(client_id: UUID):
+    try:
+        return {"state": load_demo_state(client_id)}
+    except DatabaseUnavailable:
+        raise HTTPException(status_code=503, detail="Database unavailable")
+
+
+@app.put("/api/state/{client_id}", response_model=DemoStateResponse)
+def put_demo_state(client_id: UUID, request: DemoStateWrite):
+    try:
+        state = request.state.model_dump(mode="json")
+        save_demo_state(client_id, state)
+        return {"state": state}
+    except DatabaseUnavailable:
+        raise HTTPException(status_code=503, detail="Database unavailable")
 
 
 if (DIST / "assets").is_dir():

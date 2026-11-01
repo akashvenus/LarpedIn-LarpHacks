@@ -1,5 +1,14 @@
-import { useEffect, useReducer, useRef, useState } from 'react';
-import { compose, fetchAiPreset, fetchDemo, localCompose, savePost } from './api';
+import { useCallback, useEffect, useReducer, useRef, useState } from 'react';
+import {
+  compose,
+  fetchAiPreset,
+  fetchDemo,
+  fetchDemoState,
+  getBrowserClientId,
+  localCompose,
+  saveDemoState,
+  savePost,
+} from './api';
 import { CameraGuide } from './components/CameraGuide';
 import { Dorm } from './components/Dorm';
 import { Events } from './components/Events';
@@ -9,9 +18,9 @@ import { SocialDemo } from './components/SocialDemo';
 import { Trophies } from './components/Trophies';
 import { demoReducer, initialState } from './domain/reducer';
 import { badgeUnlocked, derivedXp, micUnlocked, photoList, unlockedItemIds } from './domain/selectors';
-import { ComposerInput, DemoData, PromptId } from './domain/types';
+import { ComposerInput, DemoData, DemoState, PromptId } from './domain/types';
 
-type Screen = 'dorm' | 'events' | 'camera' | 'trophies' | 'composer' | 'gift' | 'social';
+type Screen = DemoState['currentScreen'];
 
 const DOCK: { id: Screen; label: string; icon: string }[] = [
   { id: 'dorm', label: 'Dorm', icon: '🏠' },
@@ -26,8 +35,23 @@ export default function App() {
   const [screen, setScreen] = useState<Screen>('dorm');
   const [demo, setDemo] = useState<DemoData | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
+  const [stateLoaded, setStateLoaded] = useState(false);
+  const [stateError, setStateError] = useState<string | null>(null);
+  const [saveError, setSaveError] = useState<string | null>(null);
+  const [saving, setSaving] = useState(false);
+  const [loadAttempt, setLoadAttempt] = useState(0);
+  const clientId = useRef<string | null>(null);
+  const saveQueue = useRef<Promise<void>>(Promise.resolve());
   const lastComposerInput = useRef<ComposerInput | null>(null);
   const publishedRef = useRef(false);
+
+  const handleComposerSelections = useCallback((selections: DemoState['selections']) => {
+    dispatch({ type: 'SET_COMPOSER_SELECTIONS', selections });
+  }, []);
+  const navigate = useCallback((next: Screen) => {
+    setScreen(next);
+    dispatch({ type: 'SET_CURRENT_SCREEN', screen: next });
+  }, []);
 
   useEffect(() => {
     let alive = true;
@@ -38,6 +62,50 @@ export default function App() {
       alive = false;
     };
   }, []);
+
+  useEffect(() => {
+    let alive = true;
+    setStateLoaded(false);
+    setStateError(null);
+    try {
+      clientId.current = getBrowserClientId();
+    } catch (err) {
+      setStateError(err instanceof Error ? err.message : 'Could not identify this browser');
+      return () => { alive = false; };
+    }
+    fetchDemoState(clientId.current)
+      .then((saved) => {
+        if (!alive) return;
+        if (saved) {
+          dispatch({ type: 'RESTORE_STATE', state: saved });
+          setScreen(saved.currentScreen);
+        }
+        setStateLoaded(true);
+      })
+      .catch((err: unknown) => {
+        if (alive) setStateError(err instanceof Error ? err.message : 'Could not load saved progress');
+      });
+    return () => { alive = false; };
+  }, [loadAttempt]);
+
+  useEffect(() => {
+    if (!stateLoaded || !clientId.current) return;
+    const snapshot = state;
+    setSaving(true);
+    const timer = window.setTimeout(() => {
+      saveQueue.current = saveQueue.current
+        .then(() => saveDemoState(clientId.current!, snapshot))
+        .then(() => {
+          setSaveError(null);
+          setSaving(false);
+        })
+        .catch((err: unknown) => {
+          setSaveError(err instanceof Error ? err.message : 'Could not save progress');
+          setSaving(false);
+        });
+    }, 100);
+    return () => window.clearTimeout(timer);
+  }, [state, stateLoaded]);
 
   const selectedEvent = demo?.events.find((e) => e.id === state.eventId) ?? null;
 
@@ -55,7 +123,21 @@ export default function App() {
     );
   }
 
-  if (!demo) {
+  if (stateError) {
+    return (
+      <div className="splash">
+        <div className="splash-card">
+          <p>⚠️ Could not load saved progress.</p>
+          <p className="muted">{stateError}</p>
+          <button className="btn btn-primary" onClick={() => setLoadAttempt((attempt) => attempt + 1)}>
+            Retry database connection
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  if (!demo || !stateLoaded) {
     return (
       <div className="splash">
         <div className="splash-card">
@@ -70,11 +152,17 @@ export default function App() {
 
   const handleSelectEvent = (eventId: string) => {
     dispatch({ type: 'SELECT_EVENT', eventId });
-    setScreen('camera');
+    navigate('camera');
   };
 
   const handleCapture = (blob: Blob, promptId: PromptId) => {
-    dispatch({ type: 'CAPTURE', blob, promptId });
+    const reader = new FileReader();
+    reader.onload = () => {
+      if (typeof reader.result === 'string') {
+        dispatch({ type: 'CAPTURE', dataUrl: reader.result, promptId });
+      }
+    };
+    reader.readAsDataURL(blob);
   };
 
   const handleCompose = async (input: ComposerInput) => {
@@ -96,8 +184,19 @@ export default function App() {
     publishedRef.current = true;
     dispatch({ type: 'SET_POST_TEXT', text });
     dispatch({ type: 'PUBLISH_POST' });
-    if (state.eventId && !state.giftOpened) setScreen('gift');
-    const input = lastComposerInput.current;
+    if (state.eventId && !state.giftOpened) navigate('gift');
+    const input = lastComposerInput.current ?? (
+      state.eventId && state.selections.hookId && state.selections.conclusionId &&
+      state.selections.learningIds.length === 3 && state.selections.hashtagIds.length > 0
+        ? {
+            eventId: state.eventId,
+            hookId: state.selections.hookId,
+            learningIds: state.selections.learningIds as [string, string, string],
+            conclusionId: state.selections.conclusionId,
+            hashtagIds: state.selections.hashtagIds,
+          }
+        : null
+    );
     if (input) {
       void savePost(input).catch(() => {});
     }
@@ -105,20 +204,29 @@ export default function App() {
 
   const handleComposed = (text: string, input: ComposerInput) => {
     lastComposerInput.current = input;
+    dispatch({ type: 'SET_COMPOSER_INPUT', input });
     dispatch({ type: 'SET_POST_TEXT', text });
     // The LinkedIn mockup is now the publish surface (draft + Post button).
-    setScreen('social');
+    navigate('social');
   };
 
   return (
     <div className="app">
+      {saveError && (
+        <div role="alert" className="persistence-error">
+          Progress could not be saved to the database: {saveError}
+        </div>
+      )}
+      {!saveError && saving && <div className="persistence-status">Saving progress…</div>}
       {screen === 'dorm' && (
         <Dorm
           xp={derivedXp(state)}
           standUpSubmitted={state.standUpSubmitted}
           standUpBullets={state.standUpBullets}
+          standUpDraft={state.standUpDraft}
           onSubmitStandUp={(b1, b2) => dispatch({ type: 'SUBMIT_STAND_UP', bullet1: b1, bullet2: b2 })}
-          onFindEvent={() => setScreen('events')}
+          onStandUpDraftChange={(draft) => dispatch({ type: 'SET_STAND_UP_DRAFT', draft })}
+          onFindEvent={() => navigate('events')}
           avatarItem={state.avatarItem}
           roomItems={state.roomItems}
           onSelectAvatar={(itemId) => dispatch({ type: 'SET_AVATAR_ITEM', itemId })}
@@ -146,7 +254,7 @@ export default function App() {
             photos={state.photos}
             onCapture={handleCapture}
             onCheck={(promptId) => dispatch({ type: 'CHECK_PROMPT', promptId })}
-            onContinue={() => setScreen('composer')}
+            onContinue={() => navigate('composer')}
           />
         ) : (
           <div className="empty-pick">
@@ -155,7 +263,7 @@ export default function App() {
             <p className="muted">
               Pick an event first — its photo guide (and your post) are built around it.
             </p>
-            <button className="btn btn-primary" onClick={() => setScreen('events')}>
+            <button className="btn btn-primary" onClick={() => navigate('events')}>
               Select an event
             </button>
           </div>
@@ -164,13 +272,15 @@ export default function App() {
       {screen === 'composer' && selectedEvent && (
         <div className="page-with-header">
           <header className="topbar">
-            <button className="icon-btn" onClick={() => setScreen('camera')} aria-label="Back to camera guide">
+            <button className="icon-btn" onClick={() => navigate('camera')} aria-label="Back to camera guide">
               ←
             </button>
             <span className="topbar-title">Post composer</span>
           </header>
           <PostComposer
             event={selectedEvent}
+            selections={state.selections}
+            onSelectionsChange={handleComposerSelections}
             options={demo.composer}
             onCompose={handleCompose}
             onComposed={handleComposed}
@@ -185,7 +295,7 @@ export default function App() {
             // One-shot: mark the gift open and trigger the automatic
             // simulated recruiter message (idempotent reducer action).
             dispatch({ type: 'GIFT_ANIMATION_DONE' });
-            setScreen('social');
+            navigate('social');
           }}
         />
       )}
@@ -202,7 +312,7 @@ export default function App() {
       {screen === 'social' && (
         <div className="page-with-header">
           <header className="topbar">
-            <button className="icon-btn" onClick={() => setScreen('dorm')} aria-label="Back to dorm">
+            <button className="icon-btn" onClick={() => navigate('dorm')} aria-label="Back to dorm">
               ←
             </button>
             <span className="topbar-title">Simulated LinkedIn</span>
@@ -226,7 +336,7 @@ export default function App() {
             <button
               key={item.id}
               className={`dock-item${screen === item.id ? ' active' : ''}`}
-              onClick={() => setScreen(item.id)}
+              onClick={() => navigate(item.id)}
             >
               <span className="dock-icon" aria-hidden>{item.icon}</span>
               <span className="dock-label">{item.label}</span>

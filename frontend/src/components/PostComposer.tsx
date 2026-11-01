@@ -1,8 +1,10 @@
-import { useState } from 'react';
-import { AiPreset, ComposerInput, DemoEvent, Option } from '../domain/types';
+import { useEffect, useState } from 'react';
+import { AiPreset, ComposerInput, DemoEvent, DemoState, Option } from '../domain/types';
 
 export interface PostComposerProps {
   event: DemoEvent;
+  selections: DemoState['selections'];
+  onSelectionsChange: (selections: DemoState['selections']) => void;
   options: { hooks: Option[]; learnings: Option[]; conclusions: Option[]; hashtags: Option[] };
   onCompose: (input: ComposerInput) => Promise<string>;
   onComposed: (text: string, input: ComposerInput) => void;
@@ -25,15 +27,19 @@ function pickRandomItems<T>(items: T[], count: number): T[] {
   return copy.slice(0, count);
 }
 
-export function PostComposer({ event, options, onCompose, onComposed, onAiPreset }: PostComposerProps) {
-  const [hookId, setHookId] = useState<string | null>(null);
-  const [learningIds, setLearningIds] = useState<string[]>([]);
-  const [conclusionId, setConclusionId] = useState<string | null>(null);
-  const [hashtagIds, setHashtagIds] = useState<string[]>([]);
+export function PostComposer({ event, selections, onSelectionsChange, options, onCompose, onComposed, onAiPreset }: PostComposerProps) {
+  const [hookId, setHookId] = useState<string | null>(selections.hookId);
+  const [learningIds, setLearningIds] = useState<string[]>(selections.learningIds);
+  const [conclusionId, setConclusionId] = useState<string | null>(selections.conclusionId);
+  const [hashtagIds, setHashtagIds] = useState<string[]>(selections.hashtagIds);
   const [phase, setPhase] = useState<Phase>('choose');
   const [error, setError] = useState<string | null>(null);
   const [aiLoading, setAiLoading] = useState(false);
   const [activeSlot, setActiveSlot] = useState<ActiveSlot>('hook');
+
+  useEffect(() => {
+    onSelectionsChange({ hookId, learningIds, conclusionId, hashtagIds });
+  }, [hookId, learningIds, conclusionId, hashtagIds, onSelectionsChange]);
 
   const readyToCompose =
     hookId !== null && learningIds.length === 3 && conclusionId !== null && hashtagIds.length >= 1;

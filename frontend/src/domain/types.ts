@@ -73,11 +73,12 @@ export interface PhotoRef {
 }
 
 export interface DemoState {
+  currentScreen: 'dorm' | 'events' | 'camera' | 'trophies' | 'composer' | 'gift' | 'social';
   eventId: string | null;
   completedPrompts: PromptId[];
   /**
-   * Object URL per prompt, held only in memory. One capture per prompt;
-   * a re-snap revokes the old URL and overwrites. Never persisted/uploaded.
+   * Data URL per prompt so captures can be restored from the saved demo state.
+   * One capture per prompt; a re-snap overwrites the previous photo.
    */
   photos: Record<PromptId, string | null>;
   selections: {
@@ -92,6 +93,7 @@ export interface DemoState {
   avatarItem: string;
   /** Placed room item ids (see ROOM_ITEMS). Static decor, toggleable. */
   roomItems: string[];
+  standUpDraft: string;
   standUpSubmitted: boolean;
   /** Stand-up bullets, kept so the completed stand-up re-renders with its content. */
   standUpBullets: { bullet1: string; bullet2: string } | null;
@@ -102,17 +104,22 @@ export interface DemoState {
 }
 
 export type DemoAction =
+  | { type: 'RESTORE_STATE'; state: DemoState }
+  | { type: 'SET_CURRENT_SCREEN'; screen: DemoState['currentScreen'] }
   | { type: 'SELECT_EVENT'; eventId: string }
-  | { type: 'CAPTURE'; blob: Blob; promptId: PromptId }
+  | { type: 'CAPTURE'; dataUrl: string; promptId: PromptId }
   | { type: 'CHECK_PROMPT'; promptId: PromptId }
   | { type: 'SET_HOOK'; hookId: string }
   | { type: 'TOGGLE_LEARNING'; learningId: string }
   | { type: 'SET_CONCLUSION'; conclusionId: string }
   | { type: 'TOGGLE_HASHTAG'; hashtagId: string }
   | { type: 'SET_PRESET'; preset: { hookId: string; learningIds: string[]; conclusionId: string; hashtagIds: string[] } }
+  | { type: 'SET_COMPOSER_INPUT'; input: ComposerInput }
+  | { type: 'SET_COMPOSER_SELECTIONS'; selections: DemoState['selections'] }
   | { type: 'SET_POST_TEXT'; text: string }
   | { type: 'PUBLISH_POST' }
   | { type: 'SUBMIT_STAND_UP'; bullet1: string; bullet2: string }
+  | { type: 'SET_STAND_UP_DRAFT'; draft: string }
   | { type: 'SET_AVATAR_ITEM'; itemId: string }
   | { type: 'TOGGLE_ROOM_ITEM'; itemId: string }
   | { type: 'GIFT_ANIMATION_DONE' }
@@ -120,6 +127,7 @@ export type DemoAction =
   | { type: 'REMOVE_ITEM'; spotId: SpotId };
 
 export const initialState: DemoState = {
+  currentScreen: 'dorm',
   eventId: null,
   completedPrompts: [],
   photos: { room: null, selfie: null, banner: null, handshake: null },
@@ -128,6 +136,7 @@ export const initialState: DemoState = {
   postPublished: false,
   avatarItem: 'base',
   roomItems: [],
+  standUpDraft: '',
   standUpSubmitted: false,
   standUpBullets: null,
   giftOpened: false,
