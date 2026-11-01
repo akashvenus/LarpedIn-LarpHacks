@@ -50,7 +50,7 @@ const DOCK: { id: Screen; label: string; icon: ReactNode }[] = [
   { id: 'camera', label: 'Camera', icon: '📷' },
   { id: 'dorm', label: 'Dorm', icon: '🏠' },
   { id: 'trophies', label: 'Trophies', icon: '🏆' },
-  { id: 'social', label: 'Feed', icon: <FeedIcon /> },
+  { id: 'social', label: 'Feed', icon: '📝' },
 ];
 
 export default function App() {
@@ -475,7 +475,7 @@ export default function App() {
       )}
       {!saveError && saving && <div className="persistence-status" role="status" aria-label="Saving progress"><span aria-hidden="true" /></div>}
       <XpHeader xp={xp} showProgress={screen !== 'social'} action={
-        screen === 'social' || screen === 'inbox' ? <button type="button" className="icon-btn social-mail"
+        screen === 'social' || screen === 'inbox' ? <button type="button" className={`icon-btn social-mail${screen === 'social' ? ' message-button' : ''}`}
           aria-label={screen === 'inbox' ? 'Back to feed' : 'Open inbox'} onClick={() => navigate(screen === 'inbox' ? 'social' : 'inbox')}>
           {screen === 'inbox' ? <FeedIcon /> : <Mail size={20} className="nav-arrow" aria-hidden="true" />}
         </button> : undefined

@@ -584,6 +584,7 @@
 }
 .social-page .topbar { padding: 8px 10px; background: var(--surface); border: 1px solid var(--line); border-radius: 10px; }
 .social-page .icon-btn { background: transparent; border-color: transparent; color: #454545; }
+.social-page .message-button { border-color: var(--line); }
 .social-page .icon-btn:hover { background: var(--surface-2); }
 .social-page .icon-btn:focus-visible { outline: 2px solid #0a66c2; outline-offset: 2px; }
 .social-page .dock { background: rgba(255, 255, 255, 0.96); border-color: var(--line); }
