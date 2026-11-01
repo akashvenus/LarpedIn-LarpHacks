@@ -334,23 +334,31 @@ h2 {
 }
 
 .slot-avatar {
-  left: 38%;
+  left: 40%;
   bottom: 4%;
-  width: 34%;
-  aspect-ratio: 3 / 4;
+  width: 24%;
+  aspect-ratio: 7 / 10;
 }
 
 .slot-mic {
-  right: 6%;
-  bottom: 8%;
-  width: 22%;
-  aspect-ratio: 5 / 7;
+  right: 9%;
+  bottom: 6%;
+  width: 15%;
+  aspect-ratio: 1 / 1;
+}
+
+/* The mic placeholder is a product shot on white with no alpha; multiply
+   dissolves the white box against the bright room. Replace with a
+   transparent PNG later and this rule becomes harmless. */
+.slot-mic .item {
+  mix-blend-mode: multiply;
+  filter: none;
 }
 
 .slot-lights {
-  left: 6%;
-  top: 8%;
-  width: 34%;
+  left: 38%;
+  top: 37%;
+  width: 17%;
   aspect-ratio: 10 / 3;
 }
 

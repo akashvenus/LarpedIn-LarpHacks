@@ -1,0 +1,3 @@
+- Should be allowed to snap multiple photos on that section, one per checklist item and the check button should actually be a photo icon that when tapped snaps the photo for that item and puts a small preview on the left of that todo list item in that item's frame to the left of the text  
+- Madlibs section should be more of fill-in the blanks, look like an actual madlibs activity but just within the LinkedIn post composer, user should tap the blue highlighted missing section and select from the available options
+- Compose button currently 404 fails, can we make a makeshift route right now to stand-in for the real backend/code that will be integrated later and specifically for that stand-in code to be replaced.

@@ -1,7 +1,5 @@
 /* Gift reveal (F3) + simulated social app (F3). */
 
-/* ---------- Gift ---------- */
-
 .gift-screen {
   flex: 1;
   display: flex;
@@ -13,38 +11,85 @@
   padding: 32px 8px;
 }
 
-.gift-box {
+/* ---------- Gift: lid-off + fade (TUNE BELOW) ----------
+ *
+ * The closed gift image is split into two CSS layers of the SAME file:
+ *   .gift-lid  = top 42% of the image (lid + bow)
+ *   .gift-body = bottom 58% of the image
+ * Sequence (started when the .run class lands):
+ *   idle wiggle -> lid lifts off and drifts away -> box fades out.
+ * All knobs are CSS variables; the keyframes are the TUNABLE BLOCK
+ * that may be re-cut (e.g. by ChatGPT) without touching components.
+ * -------------------------------------------------------- */
+
+.gift-stage {
   position: relative;
   width: 170px;
   height: 170px;
-  display: grid;
-  place-items: center;
+  --lid-h: 42%;              /* where the lid cut sits in the image */
+  --wiggle-delay: 0s;        /* start of the idle wiggle            */
+  --wiggle-dur: 0.7s;        /* wiggle before the lid lets go       */
+  --lid-delay: 0.7s;         /* lid starts lifting                   */
+  --lid-dur: 1.3s;           /* lid flight duration                  */
+  --fade-delay: 2.0s;        /* box fade starts                      */
+  --fade-dur: 0.5s;          /* box fade duration                    */
 }
 
-.gift-box img {
+.gift-part {
+  position: absolute;
+  left: 0;
   width: 100%;
-  height: 100%;
-  object-fit: contain;
-  animation: gift-shake 0.9s ease-in-out both;
+  background-repeat: no-repeat;
+  background-size: 100% auto;
 }
 
-.gift-box.open img {
-  animation: gift-pop 0.7s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+.gift-body {
+  top: var(--lid-h);
+  height: calc(100% - var(--lid-h));
+  background-position: 0 100%;
 }
 
-@keyframes gift-shake {
-  0%, 100% { transform: rotate(0); }
-  20% { transform: rotate(-4deg) scale(1.02); }
-  40% { transform: rotate(4deg) scale(1.04); }
-  60% { transform: rotate(-3deg) scale(1.06); }
-  80% { transform: rotate(3deg) scale(1.08); }
+.gift-lid {
+  top: 0;
+  height: var(--lid-h);
+  background-position: 0 0;
 }
 
-@keyframes gift-pop {
-  0% { transform: scale(1.08); }
-  50% { transform: scale(1.22); }
-  100% { transform: scale(1.12); }
+.gift-stage.run .gift-lid,
+.gift-stage.run .gift-body {
+  animation:
+    gift-wiggle var(--wiggle-dur) ease-in-out var(--wiggle-delay) both,
+    gift-lid-off var(--lid-dur) cubic-bezier(0.34, 1.2, 0.64, 1) var(--lid-delay) both;
 }
+
+.gift-stage.run .gift-body {
+  animation:
+    gift-wiggle var(--wiggle-dur) ease-in-out var(--wiggle-delay) both,
+    gift-fade-out var(--fade-dur) ease var(--fade-delay) both;
+}
+
+/* ---- TUNABLE BLOCK: gift animation keyframes ---- */
+
+@keyframes gift-wiggle {
+  0%, 100% { transform: rotate(0deg); }
+  25% { transform: rotate(-3deg); }
+  50% { transform: rotate(3deg); }
+  75% { transform: rotate(-2deg); }
+}
+
+@keyframes gift-lid-off {
+  0% { transform: translateY(0) rotate(0deg); opacity: 1; }
+  20% { transform: translateY(5px) rotate(2deg); }
+  60% { transform: translateY(-120px) rotate(-14deg); opacity: 1; }
+  100% { transform: translateY(-160px) rotate(-20deg); opacity: 0; }
+}
+
+@keyframes gift-fade-out {
+  0% { opacity: 1; transform: translateY(0) scale(1); }
+  100% { opacity: 0; transform: translateY(10px) scale(0.95); }
+}
+
+/* ---- end TUNABLE BLOCK ---- */
 
 .gift-glow {
   position: absolute;

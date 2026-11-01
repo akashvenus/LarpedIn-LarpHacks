@@ -2,45 +2,49 @@ import { useEffect, useRef, useState } from 'react';
 import { ASSETS } from '../assets/manifest';
 
 export interface GiftRevealProps {
-  /** Fired exactly once, after the open animation finishes. */
+  /** Fired exactly once, after the animation sequence finishes. */
   onComplete: () => void;
 }
 
 /**
- * Gift reveal (F3): automatically animates closed → open and advances.
- * No clicks required. The prize: a profile-photo icon and a message
- * icon — "Free recruiter message" — delivered in the simulated social
- * app. onComplete is guarded so it fires exactly once.
+ * Gift reveal (F3): the closed gift box image is split into two CSS
+ * layers (lid = top 42%, body = bottom 58%) and animated: the lid comes
+ * off, then the box fades out. See the marked block in social.css —
+ * Spencer tunes the keyframes there (ChatGPT-assisted) without touching
+ * this component. onComplete is guarded to fire exactly once.
  */
 export function GiftReveal({ onComplete }: GiftRevealProps) {
-  const [opened, setOpened] = useState(false);
+  const [running, setRunning] = useState(false);
+  const [showCopy, setShowCopy] = useState(false);
   const firedRef = useRef(false);
 
   useEffect(() => {
-    const openTimer = window.setTimeout(() => setOpened(true), 900);
+    // Start the CSS animation on the next frame after mount.
+    const runTimer = window.setTimeout(() => setRunning(true), 60);
+    const copyTimer = window.setTimeout(() => setShowCopy(true), 2300);
     const doneTimer = window.setTimeout(() => {
       if (!firedRef.current) {
         firedRef.current = true;
         onComplete();
       }
-    }, 2600);
+    }, 4300);
     return () => {
-      window.clearTimeout(openTimer);
+      window.clearTimeout(runTimer);
+      window.clearTimeout(copyTimer);
       window.clearTimeout(doneTimer);
     };
   }, [onComplete]);
 
+  const bg = { backgroundImage: `url(${ASSETS.giftClosed})` };
+
   return (
     <div className="gift-screen">
-      <div className={`gift-box${opened ? ' open' : ''}`}>
-        <img
-          src={opened ? ASSETS.giftOpen : ASSETS.giftClosed}
-          alt={opened ? 'Open gift box' : 'Closed gift box'}
-        />
-        {opened && <div className="gift-glow" aria-hidden />}
+      <div className={`gift-stage${running ? ' run' : ''}`} role="img" aria-label="Animated gift box opening">
+        <div className="gift-part gift-body" style={bg} />
+        <div className="gift-part gift-lid" style={bg} />
       </div>
 
-      <div className={`gift-copy${opened ? ' show' : ''}`}>
+      <div className={`gift-copy${showCopy ? ' show' : ''}`}>
         <h1>You earned a prize</h1>
         <div className="prize-row">
           <div className="prize-icon" aria-hidden>
