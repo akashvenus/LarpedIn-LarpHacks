@@ -1,23 +1,38 @@
 import { useState } from 'react';
-import { ComposerInput, DemoEvent, Option } from '../domain/types';
+import { AiPreset, ComposerInput, DemoEvent, Option } from '../domain/types';
 
 export interface PostComposerProps {
   event: DemoEvent;
   options: { hooks: Option[]; learnings: Option[]; conclusions: Option[]; hashtags: Option[] };
   onCompose: (input: ComposerInput) => Promise<string>;
-  onComposed: (text: string) => void;
+  onComposed: (text: string, input: ComposerInput) => void;
+  onAiPreset: (eventId: string) => Promise<AiPreset>;
 }
 
 type Phase = 'choose' | 'composing';
 type ActiveSlot = 'hook' | 'learning' | 'conclusion' | 'hashtags';
 
-export function PostComposer({ event, options, onCompose, onComposed }: PostComposerProps) {
+function pickRandom<T>(items: T[]): T {
+  return items[Math.floor(Math.random() * items.length)];
+}
+
+function pickRandomItems<T>(items: T[], count: number): T[] {
+  const copy = [...items];
+  for (let index = copy.length - 1; index > 0; index -= 1) {
+    const swap = Math.floor(Math.random() * (index + 1));
+    [copy[index], copy[swap]] = [copy[swap], copy[index]];
+  }
+  return copy.slice(0, count);
+}
+
+export function PostComposer({ event, options, onCompose, onComposed, onAiPreset }: PostComposerProps) {
   const [hookId, setHookId] = useState<string | null>(null);
   const [learningIds, setLearningIds] = useState<string[]>([]);
   const [conclusionId, setConclusionId] = useState<string | null>(null);
   const [hashtagIds, setHashtagIds] = useState<string[]>([]);
   const [phase, setPhase] = useState<Phase>('choose');
   const [error, setError] = useState<string | null>(null);
+  const [aiLoading, setAiLoading] = useState(false);
   const [activeSlot, setActiveSlot] = useState<ActiveSlot>('hook');
 
   const readyToCompose =
@@ -35,13 +50,49 @@ export function PostComposer({ event, options, onCompose, onComposed }: PostComp
     );
   };
 
-  /** Deterministic curated preset, no live model call. */
-  const aiTakeTheWheel = () => {
+  const applyRandomPreset = () => {
     if (options.hooks.length === 0 || options.learnings.length < 3) return;
-    setHookId(options.hooks[0].id);
-    setLearningIds(options.learnings.slice(0, 3).map((l) => l.id));
-    setConclusionId(options.conclusions[0]?.id ?? null);
-    setHashtagIds(options.hashtags.slice(0, 2).map((h) => h.id));
+    const hashtagCount = Math.min(options.hashtags.length, Math.floor(Math.random() * 3) + 1);
+    setHookId(pickRandom(options.hooks).id);
+    setLearningIds(pickRandomItems(options.learnings, 3).map((item) => item.id));
+    setConclusionId(options.conclusions.length > 0 ? pickRandom(options.conclusions).id : null);
+    setHashtagIds(pickRandomItems(options.hashtags, hashtagCount).map((item) => item.id));
+  };
+
+  const applyPreset = (preset: AiPreset) => {
+    const hook = options.hooks.find((item) => item.id === preset.hookId);
+    const conclusion = options.conclusions.find((item) => item.id === preset.conclusionId);
+    const learnings = preset.learningIds.filter((id) => options.learnings.some((item) => item.id === id));
+    const hashtags = preset.hashtagIds.filter((id) => options.hashtags.some((item) => item.id === id));
+    if (
+      !hook ||
+      !conclusion ||
+      learnings.length !== 3 ||
+      new Set(learnings).size !== 3 ||
+      hashtags.length < 1 ||
+      hashtags.length > 3 ||
+      new Set(hashtags).size !== hashtags.length
+    ) {
+      applyRandomPreset();
+      return;
+    }
+    setHookId(hook.id);
+    setLearningIds(learnings);
+    setConclusionId(conclusion.id);
+    setHashtagIds(hashtags);
+  };
+
+  const aiTakeTheWheel = async () => {
+    if (options.hooks.length === 0 || options.learnings.length < 3) return;
+    setAiLoading(true);
+    setError(null);
+    try {
+      applyPreset(await onAiPreset(event.id));
+    } catch {
+      applyRandomPreset();
+    } finally {
+      setAiLoading(false);
+    }
   };
 
   const handleCompose = async () => {
@@ -57,7 +108,7 @@ export function PostComposer({ event, options, onCompose, onComposed }: PostComp
         hashtagIds,
       };
       const text = await onCompose(input);
-      onComposed(text);
+      onComposed(text, input);
     } catch (err) {
       setPhase('choose');
       setError(err instanceof Error ? err.message : 'Compose failed.');
@@ -131,7 +182,7 @@ export function PostComposer({ event, options, onCompose, onComposed }: PostComp
         {activeSlot === 'hook' && (
           <div className="choice-list">
             {options.hooks.map((h) => (
-              <button type="button" key={h.id} className={`choice${hookId === h.id ? ' on' : ''}`} onClick={() => setHookId(h.id)}>
+              <button type="button" key={h.id} className={`choice${hookId === h.id ? ' on' : ''}`} onClick={() => { setHookId(h.id); setActiveSlot('learning'); }}>
                 “{h.text}”
               </button>
             ))}
@@ -144,7 +195,10 @@ export function PostComposer({ event, options, onCompose, onComposed }: PostComp
                 type="button"
                 key={l.id}
                 className={`choice${learningIds.includes(l.id) ? ' on' : ''}`}
-                onClick={() => toggleLearning(l.id)}
+                onClick={() => {
+                  toggleLearning(l.id);
+                  if (!learningIds.includes(l.id) && learningIds.length === 2) setActiveSlot('conclusion');
+                }}
                 disabled={!learningIds.includes(l.id) && learningIds.length >= 3}
               >
                 {l.text}
@@ -155,7 +209,7 @@ export function PostComposer({ event, options, onCompose, onComposed }: PostComp
         {activeSlot === 'conclusion' && (
           <div className="choice-list">
             {options.conclusions.map((c) => (
-              <button type="button" key={c.id} className={`choice${conclusionId === c.id ? ' on' : ''}`} onClick={() => setConclusionId(c.id)}>
+              <button type="button" key={c.id} className={`choice${conclusionId === c.id ? ' on' : ''}`} onClick={() => { setConclusionId(c.id); setActiveSlot('hashtags'); }}>
                 {c.text}
               </button>
             ))}
@@ -180,10 +234,20 @@ export function PostComposer({ event, options, onCompose, onComposed }: PostComp
       </section>
 
       <div className="composer-actions">
-        <button type="button" className="btn btn-ghost" onClick={aiTakeTheWheel} disabled={phase === 'composing'}>
-          ✨ AI take the wheel
+        <button
+          type="button"
+          className="btn btn-ghost"
+          onClick={() => void aiTakeTheWheel()}
+          disabled={phase === 'composing' || aiLoading}
+        >
+          {aiLoading ? 'Asking Gemini…' : '✨ AI take the wheel'}
         </button>
-        <button type="button" className="btn btn-primary" onClick={() => void handleCompose()} disabled={!readyToCompose || phase === 'composing'}>
+        <button
+          type="button"
+          className="btn btn-primary"
+          onClick={() => void handleCompose()}
+          disabled={!readyToCompose || phase === 'composing' || aiLoading}
+        >
           {phase === 'composing' ? 'Composing…' : 'Compose post'}
         </button>
       </div>

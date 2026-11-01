@@ -501,3 +501,21 @@
     gap: 6px;
   }
 }
+
+/* LinkedIn-inspired feed palette */
+.social {
+  --surface: #fff;
+  --surface-2: #eef3f8;
+  --line: #d8d8d8;
+  --text: #191919;
+  --muted: #666;
+  --bg: #f4f2ee;
+  --ok: #057642;
+  color: var(--text);
+  font-family: Arial, Helvetica, sans-serif;
+}
+.social .btn-primary { background: #0a66c2; color: #fff; border-radius: 999px; }
+.social .pill-sim { background: #e8f3ff; color: #004182; }
+.social .inbox-avatar { background: #0a66c2; color: #fff; }
+.social .inbox-count { background: #0a66c2; }
+.social .card h3 { color: #454545; }

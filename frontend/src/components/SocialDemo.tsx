@@ -94,7 +94,7 @@ export function SocialDemo({
             {postText ? (
               <p className="feed-text">{postText}</p>
             ) : (
-              <p className="muted">Composing your post…</p>
+              <p className="muted">Choose an event and compose a post to share it here.</p>
             )}
             {photoGrid}
           </article>

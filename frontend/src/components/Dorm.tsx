@@ -1,38 +1,48 @@
 import { useState } from 'react';
-import { ASSETS } from '../assets/manifest';
+import { ASSETS, AVATAR_ITEMS, ROOM_ITEMS } from '../assets/manifest';
+import { InventoryPanel } from './InventoryPanel';
 
 export interface DormProps {
   xp: number;
-  micUnlocked: boolean;
-  lightsUnlocked: boolean;
   standUpSubmitted: boolean;
   standUpBullets: { bullet1: string; bullet2: string } | null;
   onSubmitStandUp: (bullet1: string, bullet2: string) => void;
   onFindEvent: () => void;
+  avatarItem: string;
+  roomItems: string[];
+  onSelectAvatar: (itemId: string) => void;
+  onToggleRoomItem: (itemId: string) => void;
 }
 
 /**
- * Dorm screen (F1): backdrop, avatar, internship XP bar, unlockable
- * cosmetics in fixed slots, event CTA, and the optional two-bullet
- * stand-up (+5 XP, can never unlock the gift on its own). The completed
- * stand-up keeps its content for the rest of the session.
+ * Dorm screen (F1): room backdrop with the avatar in a fixed anchor,
+ * a briefcase button (top-right of the room view) that opens the
+ * inventory — one panel for avatar looks and static room decor — plus
+ * the XP bar, event CTA, and the optional two-bullet stand-up.
  */
 export function Dorm({
   xp,
-  micUnlocked,
-  lightsUnlocked,
   standUpSubmitted,
   standUpBullets,
   onSubmitStandUp,
   onFindEvent,
+  avatarItem,
+  roomItems,
+  onSelectAvatar,
+  onToggleRoomItem,
 }: DormProps) {
-  const [bullet1, setBullet1] = useState('');
-  const [bullet2, setBullet2] = useState('');
+  const [inventoryOpen, setInventoryOpen] = useState(false);
+  const [standUp, setStandUp] = useState('');
+  const bullets = standUp.split('\n').map((line) => line.replace(/^\s*[•*-]\s*/, '').trim()).filter(Boolean);
+
+  const avatarEntry = AVATAR_ITEMS.find((item) => item.id === avatarItem);
+  const avatarAsset = avatarEntry?.asset ?? ASSETS.avatar;
+  const avatarScale = avatarEntry?.scale ?? 1;
 
   return (
     <>
       <header>
-        <h1>LarpedIn</h1>
+        <h1 className="brand-logo" aria-label="LarpedIn">Larped<span>in</span></h1>
         <p className="muted" style={{ margin: '0 0 12px' }}>
           Your internship sim. Photo ops → post → prize.
         </p>
@@ -56,18 +66,27 @@ export function Dorm({
 
       <div className="dorm-scene" aria-label="Your dorm room">
         <img className="dorm-bg" src={ASSETS.dormBackground} alt="" />
-        {lightsUnlocked && (
-          <div className="dorm-slot slot-lights">
-            <img className="item" src={ASSETS.rgbLights} alt="RGB lights, unlocked" />
+        {ROOM_ITEMS.filter((item) => roomItems.includes(item.id)).map((item) => (
+          <div key={item.id} className={`dorm-slot ${item.slot}`}>
+            <img className="item" src={item.asset} alt={`${item.name}, placed`} />
           </div>
-        )}
+        ))}
         <div className="dorm-slot slot-avatar">
           <img
             className="item"
-            src={micUnlocked ? ASSETS.avatarMic : ASSETS.avatar}
-            alt={micUnlocked ? 'You, holding your microphone' : 'You, in the dorm'}
+            src={avatarAsset}
+            style={avatarScale !== 1 ? { transform: `scale(${avatarScale})` } : undefined}
+            alt="You, in the dorm"
           />
         </div>
+        <button
+          className="dorm-inventory-btn"
+          onClick={() => setInventoryOpen(true)}
+          aria-label="Open inventory"
+          title="Inventory"
+        >
+          🧳
+        </button>
       </div>
 
       <div className="dorm-cta-row">
@@ -78,6 +97,7 @@ export function Dorm({
 
       <section className="card">
         <h3>Daily stand-up · +5 XP (optional)</h3>
+        <p className="muted">Share a win from today and what you plan to do next.</p>
         {standUpSubmitted ? (
           <div className="standup-logged">
             <p className="standup-done" style={{ margin: 0 }}>
@@ -98,29 +118,32 @@ export function Dorm({
           <>
             <div className="standup-grid">
               <textarea
-                placeholder="Win (did)"
-                value={bullet1}
-                onChange={(e) => setBullet1(e.target.value)}
-                aria-label="Stand-up: win (did)"
-              />
-              <textarea
-                placeholder="Next (todo)"
-                value={bullet2}
-                onChange={(e) => setBullet2(e.target.value)}
-                aria-label="Stand-up: next (todo)"
+                placeholder={'• Win (did)\n• Next (todo)'}
+                value={standUp}
+                onChange={(e) => setStandUp(e.target.value)}
+                aria-label="Stand-up: win and next steps"
               />
             </div>
             <button
               className="btn btn-block"
               style={{ marginTop: 10 }}
-              disabled={!bullet1.trim() && !bullet2.trim()}
-              onClick={() => onSubmitStandUp(bullet1.trim(), bullet2.trim())}
+              disabled={bullets.length === 0}
+              onClick={() => onSubmitStandUp(bullets[0] ?? '', bullets.slice(1).join(' · '))}
             >
               Log stand-up
             </button>
           </>
         )}
       </section>
+
+      <InventoryPanel
+        open={inventoryOpen}
+        avatarItem={avatarItem}
+        roomItems={roomItems}
+        onSelectAvatar={onSelectAvatar}
+        onToggleRoomItem={onToggleRoomItem}
+        onClose={() => setInventoryOpen(false)}
+      />
     </>
   );
 }

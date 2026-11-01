@@ -1,5 +1,5 @@
 /// <reference types="vite/client" />
-import { ComposerInput, DemoData } from './domain/types';
+import { AiPreset, ComposerInput, DemoData } from './domain/types';
 import { MOCK_DEMO } from './demo/mockDemo';
 
 /**
@@ -51,6 +51,32 @@ export async function compose(input: ComposerInput): Promise<string> {
   }
   return body.text;
 }
+
+export async function fetchAiPreset(eventId: string): Promise<AiPreset> {
+  const res = await fetch(`${apiBase}/api/ai/preset`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ eventId }),
+  });
+  const body = (await res.json().catch(() => null)) as (Partial<AiPreset> & { detail?: unknown }) | null;
+  if (!res.ok || !body?.hookId) {
+    throw new ApiError(body?.detail ? String(body.detail) : `AI preset failed: ${res.status}`);
+  }
+  return body as AiPreset;
+}
+
+export async function savePost(input: ComposerInput): Promise<void> {
+  const res = await fetch(`${apiBase}/api/posts`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(input),
+  });
+  if (!res.ok) {
+    const body = (await res.json().catch(() => null)) as { detail?: unknown } | null;
+    throw new ApiError(body?.detail ? String(body.detail) : `Save failed: ${res.status}`);
+  }
+}
+
 /**
  * Clone of POST /api/compose for standalone dev — used only when the
  * backend is unreachable (network error). Mirrors the locked contract:

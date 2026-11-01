@@ -1,2 +1,4 @@
 fastapi>=0.110
 uvicorn>=0.29
+psycopg[binary]>=3.3
+google-genai>=2.34

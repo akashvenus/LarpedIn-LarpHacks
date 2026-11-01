@@ -145,6 +145,20 @@ export function demoReducer(state: DemoState, action: DemoAction): DemoState {
       // One callback: mark the gift open and send the simulated message.
       if (state.giftOpened) return state;
       return { ...state, giftOpened: true, outreachSent: true };
+
+    case 'SET_AVATAR_ITEM':
+      if (state.avatarItem === action.itemId) return state;
+      return { ...state, avatarItem: action.itemId };
+
+    case 'TOGGLE_ROOM_ITEM': {
+      const placed = state.roomItems.includes(action.itemId);
+      return {
+        ...state,
+        roomItems: placed
+          ? state.roomItems.filter((id) => id !== action.itemId)
+          : [...state.roomItems, action.itemId],
+      };
+    }
   }
 }
 

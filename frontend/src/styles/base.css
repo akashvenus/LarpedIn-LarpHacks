@@ -177,7 +177,7 @@ h2 {
   backdrop-filter: blur(14px);
   border-top: 1px solid var(--line);
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
+  grid-template-columns: repeat(5, 1fr);
   gap: 6px;
   z-index: 20;
 }
@@ -334,21 +334,12 @@ h2 {
 }
 
 .slot-avatar {
-  left: 40%;
-  bottom: 4%;
-  width: 24%;
-  aspect-ratio: 7 / 10;
-}
-
-.slot-lights {
-  left: 38%;
-  top: 37%;
-  width: 17%;
-  aspect-ratio: 10 / 3;
-}
-
-.slot-lights .item {
-  filter: drop-shadow(0 0 14px rgba(78, 205, 196, 0.55));
+  /* Square slot: the hoodie variants are square (724x724) and the base
+     blob is 7:10 — contain-fitting all five in one bigger slot. */
+  left: 31%;
+  bottom: 2%;
+  width: 38%;
+  aspect-ratio: 1 / 1;
 }
 
 .slot-empty {
@@ -637,4 +628,265 @@ h2 {
 
 .shelf-status.on {
   color: var(--ok);
+}
+
+/* ---------- Inventory: briefcase button + bottom sheet ---------- */
+
+.dorm-inventory-btn {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  background: rgba(20, 18, 43, 0.72);
+  backdrop-filter: blur(6px);
+  font-size: 20px;
+  line-height: 1;
+  cursor: pointer;
+  z-index: 5;
+  display: grid;
+  place-items: center;
+  transition: transform 0.1s ease, background 0.15s ease;
+}
+
+.dorm-inventory-btn:active {
+  transform: scale(0.94);
+}
+
+.sheet-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(10, 9, 24, 0.6);
+  backdrop-filter: blur(3px);
+  z-index: 50;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+}
+
+.sheet {
+  width: 100%;
+  max-width: 430px;
+  max-height: 82dvh;
+  overflow-y: auto;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-bottom: none;
+  border-radius: 20px 20px 0 0;
+  padding: 18px 16px calc(20px + env(safe-area-inset-bottom, 0px));
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  animation: sheet-up 0.28s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+@keyframes sheet-up {
+  from { transform: translateY(40px); opacity: 0; }
+  to { transform: translateY(0); opacity: 1; }
+}
+
+.sheet-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.sheet-close {
+  width: 36px;
+  height: 36px;
+  font-size: 15px;
+}
+
+.inv-title {
+  margin: 0 0 10px;
+  font-size: 14px;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.inv-hint {
+  margin: 8px 0 0;
+  font-size: 12px;
+}
+
+/* Avatar look tiles */
+
+.avatar-look-row {
+  display: flex;
+  gap: 10px;
+  overflow-x: auto;
+  padding-bottom: 4px;
+}
+
+.inv-tile {
+  flex: 0 0 auto;
+  width: 84px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  background: var(--bg);
+  border: 2px solid var(--line);
+  border-radius: 14px;
+  padding: 8px 6px;
+  cursor: pointer;
+  color: var(--text);
+  transition: border-color 0.15s ease, transform 0.1s ease;
+}
+
+.inv-tile:active {
+  transform: scale(0.97);
+}
+
+.inv-tile img {
+  width: 64px;
+  height: 64px;
+  object-fit: contain;
+  border-radius: 8px;
+}
+
+.inv-tile.sel {
+  border-color: var(--teal);
+  background: rgba(78, 205, 196, 0.1);
+}
+
+.inv-tile.locked {
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+
+.inv-tile.locked img {
+  filter: grayscale(1);
+}
+
+.inv-name {
+  font-size: 10px;
+  font-weight: 600;
+  text-align: center;
+  line-height: 1.2;
+}
+
+/* Room item tiles */
+
+.room-item-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 10px;
+}
+
+.room-tile {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  background: var(--bg);
+  border: 2px solid var(--line);
+  border-radius: 14px;
+  padding: 8px;
+  cursor: pointer;
+  color: var(--text);
+  transition: border-color 0.15s ease, transform 0.1s ease;
+}
+
+.room-tile:active {
+  transform: scale(0.98);
+}
+
+.room-tile img {
+  width: 100%;
+  aspect-ratio: 3 / 2;
+  object-fit: cover;
+  border-radius: 8px;
+}
+
+.room-tile.on {
+  border-color: var(--teal);
+  background: rgba(78, 205, 196, 0.1);
+}
+
+.room-tile-name {
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.room-tile-state {
+  align-self: flex-start;
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--muted);
+  background: var(--surface-2);
+  border-radius: 999px;
+  padding: 2px 8px;
+}
+
+.room-tile-state.on {
+  color: var(--ok);
+  background: rgba(123, 228, 149, 0.14);
+}
+
+/* ---------- Dorm room slots (inventory placeables) ----------
+ * Fixed slots over the dorm photo. Positions are percentage-based;
+ * nudge per-item if the art lands off-feature. */
+
+.slot-lights {
+  /* Bigger + more pronounced: spans past the corkboard's top corners. */
+  left: 35.5%;
+  top: 45.5%;
+  width: 19%;
+  aspect-ratio: 3 / 1;
+}
+
+.slot-poster {
+  /* Much larger, hung on the green wall under the window. */
+  left: 62%;
+  top: 24%;
+  width: 13%;
+  aspect-ratio: 3 / 4;
+}
+
+.slot-stickers {
+  left: 41%;
+  top: 50.5%;
+  width: 8.5%;
+  aspect-ratio: 3 / 2;
+}
+
+.slot-mug {
+  /* Sitting on the windowsill, in front of the glass. */
+  left: 71%;
+  top: 47%;
+  width: 12%;
+  aspect-ratio: 3 / 2;
+}
+
+.slot-mousepad {
+  left: 35.5%;
+  top: 56.5%;
+  width: 8%;
+  aspect-ratio: 3 / 2;
+}
+
+@media (max-width: 374px) {
+  .slot-poster { width: 12%; }
+  .slot-mug { width: 10%; }
+}
+
+.brand-logo {
+  font-family: Arial, Helvetica, sans-serif;
+  font-weight: 700;
+  letter-spacing: -0.055em;
+}
+.brand-logo span {
+  display: inline-block;
+  margin-left: 2px;
+  padding: 0 4px 2px;
+  border-radius: 4px;
+  background: #0a66c2;
+  color: #fff;
+  letter-spacing: -0.06em;
+  line-height: 1.05;
 }

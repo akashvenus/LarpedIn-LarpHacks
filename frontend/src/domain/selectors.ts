@@ -31,10 +31,6 @@ export function micUnlocked(state: DemoState): boolean {
   return anyPhoto(state);
 }
 
-export function lightsUnlocked(state: DemoState): boolean {
-  return state.postPublished;
-}
-
 export function badgeUnlocked(state: DemoState): boolean {
   return state.completedPrompts.length === 4;
 }
