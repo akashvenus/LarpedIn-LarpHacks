@@ -1,4 +1,4 @@
-/* The room, dock selection, Dorm icon, trophy badge, and loading wheels keep their shapes. */
-:where(.app, .splash) :not(.dorm-scene):not(.dorm-scene *):not(.dock-item.dock-home):not(.dock-item.active):not(.badge-orb):not(.inbox-spinner):not(.cam-spinner):not(.persistence-status span) {
+/* The room, profile photos, dock selection, trophy badge, and loading wheels keep their shapes. */
+:where(.app, .splash) :not(.dorm-scene):not(.dorm-scene *):not(.dock-item.dock-home):not(.dock-item.active):not(.badge-orb):not(.inbox-spinner):not(.cam-spinner):not(.persistence-status span):not(:is(.feed-avatar, .profile-avatar, .inbox-avatar, .inbox-user-avatar, .profile-photo-option, .profile-photo-option img)) {
   border-radius: 0;
 }

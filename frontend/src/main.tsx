@@ -6,6 +6,7 @@ import './styles/room.css';
 import './styles/camera.css';
 import './styles/social.css';
 import './styles/sharp.css';
+import './styles/mobile.css';
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
