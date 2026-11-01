@@ -58,6 +58,8 @@ if (DIST / "assets").is_dir():
 
 @app.get("/{path:path}")  # must stay last so API routes win
 def spa(path: str):
+    if path == "api/compose":
+        raise HTTPException(status_code=405, detail="Method Not Allowed")
     if path == "api" or path.startswith("api/"):
         raise HTTPException(status_code=404, detail="Not found")
     index = DIST / "index.html"
