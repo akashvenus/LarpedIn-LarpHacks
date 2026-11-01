@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useReducer, useRef, useState } from 'react';
+import { useCallback, useEffect, useReducer, useRef, useState, type ReactNode } from 'react';
 import {
   compose,
   fetchAiPreset,
@@ -34,12 +34,21 @@ const isLocalDemo = /^\/demo\/?$/.test(window.location.pathname);
 
 type Screen = DemoState['currentScreen'];
 
-const DOCK: { id: Screen; label: string; icon: string }[] = [
+function FeedIcon() {
+  return (
+    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <rect x="3" y="3" width="18" height="18" rx="2" />
+      <path d="M7 8h10M7 12h10M7 16h6" />
+    </svg>
+  );
+}
+
+const DOCK: { id: Screen; label: string; icon: ReactNode }[] = [
   { id: 'dorm', label: 'Dorm', icon: '🏠' },
   { id: 'events', label: 'Events', icon: '📅' },
   { id: 'camera', label: 'Camera', icon: '📷' },
   { id: 'trophies', label: 'Trophies', icon: '🏆' },
-  { id: 'social', label: 'Feed', icon: '▤' },
+  { id: 'social', label: 'Feed', icon: <FeedIcon /> },
 ];
 
 export default function App() {
@@ -506,6 +515,7 @@ export default function App() {
 
       {screen === 'gift' && (
         <GiftReveal
+          recruiter={demo.recruiter}
           onComplete={() => {
             // Claiming the gift sends the message inside the demo.
             dispatch({ type: 'GIFT_ANIMATION_DONE' });
@@ -533,10 +543,10 @@ export default function App() {
             <span className="brand-logo social-wordmark" aria-label="LarpedIn">Larped<span>in</span></span>
             {screen === 'inbox' && <span className="social-section">Inbox</span>}
             <button type="button" className="icon-btn social-mail" aria-label={screen === 'inbox' ? 'Back to feed' : 'Open inbox'} onClick={() => navigate(screen === 'inbox' ? 'social' : 'inbox')}>
-              {screen === 'inbox' ? '▤' : '✉️'}
+              {screen === 'inbox' ? <FeedIcon /> : '✉️'}
             </button>
           </header>
-          {screen === 'inbox' ? <Inbox recruiter={demo.recruiter} message={demo.outreachMessage} postText={state.outreachPostText || state.postText} sent={state.outreachSent} sending={sendingRecruiter} /> : <SocialDemo
+          {screen === 'inbox' ? <Inbox recruiter={demo.recruiter} message={demo.outreachMessage} sent={state.outreachSent} sending={sendingRecruiter} /> : <SocialDemo
             profile={{ ...demo.profile, name: state.name, headline: state.occupation }}
             postText={editingPost ? replacement?.text ?? '' : state.postText}
             photos={photoList(state)}
