@@ -182,7 +182,11 @@ export function demoReducer(state: DemoState, action: DemoAction): DemoState {
     case 'GIFT_ANIMATION_DONE':
       // One callback: mark the gift open and send the simulated message.
       if (state.giftOpened) return state;
-      return { ...state, giftOpened: true, outreachSent: true, outreachPostText: '' };
+      return { ...state, giftOpened: true, outreachSent: true, outreachPostText: '', recruiterReplyOutcome: action.outcome, recruiterReplyAt: action.replyAt };
+
+    case 'SCHEDULE_RECRUITER_REPLY':
+      if (!state.outreachSent || state.recruiterReplyOutcome) return state;
+      return { ...state, recruiterReplyOutcome: action.outcome, recruiterReplyAt: action.replyAt };
 
     case 'PLACE_ITEM': {
       const item = findItem(action.itemId);

@@ -147,6 +147,8 @@ export interface DemoState {
   giftOpened: boolean;
   outreachSent: boolean;
   outreachPostText: string;
+  recruiterReplyOutcome: 'offer' | 'rejection' | null;
+  recruiterReplyAt: number | null;
   /** Which item sits in each dorm spot. An item occupies at most one spot. */
   placements: Partial<Record<SpotId, ItemId>>;
 }
@@ -175,7 +177,8 @@ export type DemoAction =
   | { type: 'SET_ACCESSORY'; itemId: AccessoryId | null }
   | { type: 'SET_HELD_PROP'; itemId: HeldPropId | null }
   | { type: 'TOGGLE_ROOM_ITEM'; itemId: string }
-  | { type: 'GIFT_ANIMATION_DONE' }
+  | { type: 'GIFT_ANIMATION_DONE'; outcome: 'offer' | 'rejection'; replyAt: number }
+  | { type: 'SCHEDULE_RECRUITER_REPLY'; outcome: 'offer' | 'rejection'; replyAt: number }
   | { type: 'PLACE_ITEM'; itemId: ItemId; spotId: SpotId }
   | { type: 'REMOVE_ITEM'; spotId: SpotId };
 
@@ -204,5 +207,7 @@ export const initialState: DemoState = {
   giftOpened: false,
   outreachSent: false,
   outreachPostText: '',
+  recruiterReplyOutcome: null,
+  recruiterReplyAt: null,
   placements: {},
 };

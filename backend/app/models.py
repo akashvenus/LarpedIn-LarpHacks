@@ -147,6 +147,8 @@ class DemoStatePayload(BaseModel):
     giftOpened: bool
     outreachSent: bool
     outreachPostText: str = ""
+    recruiterReplyOutcome: Literal["offer", "rejection"] | None = None
+    recruiterReplyAt: int | None = Field(default=None, ge=0)
     placements: dict[str, str]
 
 

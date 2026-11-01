@@ -116,6 +116,9 @@ body {
   cursor: pointer;
 }
 
+.nav-arrow { vertical-align: middle; }
+.action-icon { flex: none; margin-left: 5px; vertical-align: -0.2em; }
+
 .muted {
   color: var(--muted);
 }
@@ -224,6 +227,7 @@ h2 {
   display: flex;
   flex-direction: column;
   align-items: center;
+  justify-content: center;
   gap: 2px;
   background: transparent;
   border: none;
@@ -248,6 +252,35 @@ h2 {
 
 .dock-item.active .dock-icon {
   transform: translateY(-2px) scale(1.08);
+}
+
+.dock-item.dock-home {
+  position: relative;
+  justify-content: flex-end;
+  padding-top: 36px;
+  background: transparent;
+}
+
+.dock-home .dock-icon {
+  position: absolute;
+  top: -22px;
+  left: 50%;
+  display: grid;
+  place-items: center;
+  width: 56px;
+  height: 56px;
+  border: 1px solid var(--line);
+  border-radius: 50%;
+  background: var(--surface);
+  box-shadow: 0 -2px 8px rgba(0, 0, 0, 0.08);
+  font-size: 27px;
+  transform: translateX(-50%);
+}
+
+.dock-item.dock-home.active .dock-icon {
+  background: var(--surface-2);
+  border-color: #aacde9;
+  transform: translateX(-50%);
 }
 
 /* ---------- Cards ---------- */
@@ -351,7 +384,7 @@ h2 {
   padding: 10px 12px;
 }
 
-/* Height leaves room for the header, button row and dock on a phone without scrolling. */
+/* Height leaves room for the header and dock on a phone without scrolling. */
 .dorm-scene {
   position: relative;
   flex: none;
@@ -420,12 +453,6 @@ h2 {
 
 .slot-empty {
   display: none;
-}
-
-.dorm-cta-row {
-  display: flex;
-  gap: 10px;
-  flex-wrap: wrap;
 }
 
 /* ---------- Stand-up ---------- */
@@ -528,14 +555,24 @@ h2 {
 
 .event-actions {
   display: flex;
+  width: 100%;
   gap: 10px;
 }
 
 .event-actions .btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
   flex: 1;
+  min-width: 0;
+  min-height: 44px;
   padding: 11px 10px;
   font-size: 14px;
 }
+
+.events-coming-soon { padding: 12px 16px; color: var(--muted); text-align: center; font-size: 13px; }
+.events-coming-soon strong { color: var(--text); font-size: 14px; }
+.events-coming-soon p { margin: 5px 0 0; }
 
 /* ---------- Trophies ---------- */
 

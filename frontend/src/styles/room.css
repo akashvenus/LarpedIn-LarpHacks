@@ -15,6 +15,32 @@
   cursor: grabbing;
 }
 
+.journey-banner {
+  position: absolute;
+  z-index: 4;
+  top: 10px;
+  left: 10px;
+  right: 62px;
+  min-height: 48px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 7px 12px;
+  border: 1px solid #d8d8d8;
+  border-radius: 10px;
+  background: #fff;
+  color: #191919;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.journey-banner small, .journey-banner strong { display: block; }
+.journey-banner small { color: #5e5e5e; font-size: 10px; font-weight: 700; letter-spacing: 0.06em; }
+.journey-banner strong { margin-top: 2px; font-size: 14px; }
+.journey-arrow { flex: none; color: #0a66c2; font-size: 22px; }
+.journey-banner:focus-visible { outline: 3px solid #0a66c2; outline-offset: 2px; }
+
 .room-joystick {
   position: absolute;
   left: 12px;
@@ -187,11 +213,37 @@
   filter: grayscale(1) brightness(0.45);
 }
 
-.sheet-backdrop { background: transparent; backdrop-filter: none; pointer-events: none; }
-.sheet { pointer-events: auto; max-height: 45dvh; gap: 12px; padding-top: 12px; }
+.sheet-backdrop { position: absolute; background: transparent; backdrop-filter: none; pointer-events: none; }
+.sheet {
+  pointer-events: auto;
+  max-height: 70%;
+  gap: 12px;
+  padding: 12px 16px 16px;
+  animation: sheet-up 0.28s cubic-bezier(0.22, 1, 0.36, 1) backwards;
+  transition: transform 0.18s ease-out;
+}
+.sheet.is-swiping { transition: none; }
+.sheet-header {
+  position: sticky;
+  top: -12px;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 6px;
+  margin: -12px -16px 0;
+  padding: 10px 16px 4px;
+  background: var(--surface);
+  touch-action: none;
+  user-select: none;
+  cursor: grab;
+}
+.sheet-header:active { cursor: grabbing; }
+.sheet-header-row { display: flex; align-items: center; justify-content: space-between; }
+.sheet-handle { width: 38px; height: 4px; align-self: center; border-radius: 999px; background: #a5adb5; }
 .placeable-row { display: flex; gap: 8px; overflow-x: auto; padding: 8px 0; }
 .placeable-tile { flex: 0 0 96px; touch-action: none; user-select: none; }
 .placeable-tile:disabled { opacity: 0.6; }
 .placeable-tile img { height: 48px; }
 .drag-ghost { position: fixed; z-index: 51; width: 70px; height: 70px; object-fit: contain; pointer-events: none; transform: translate(-50%, -50%); }
-@media (prefers-reduced-motion: reduce) { .sheet { animation: none; } }
+@media (prefers-reduced-motion: reduce) { .sheet { animation: none; transition: none; } }
