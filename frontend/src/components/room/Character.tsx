@@ -199,14 +199,23 @@ function ClipOnMic() {
 function PropellerCap({ xpPulse }: { xpPulse: number }) {
   const propeller = useRef<Group>(null);
   const spinRemaining = useRef(0);
+  const reducedMotion = useRef(false);
   useEffect(() => {
-    if (xpPulse > 0 && !window.matchMedia?.('(prefers-reduced-motion: reduce)').matches) spinRemaining.current = 2;
+    const preference = window.matchMedia?.('(prefers-reduced-motion: reduce)');
+    if (!preference) return;
+    const update = () => { reducedMotion.current = preference.matches; };
+    update();
+    preference.addEventListener('change', update);
+    return () => preference.removeEventListener('change', update);
+  }, []);
+  useEffect(() => {
+    if (xpPulse > 0 && !reducedMotion.current) spinRemaining.current = 2;
   }, [xpPulse]);
   useFrame((_, delta) => {
-    if (!propeller.current || spinRemaining.current <= 0) return;
-    const step = Math.min(delta, spinRemaining.current);
-    propeller.current.rotation.y += step * Math.PI * 5;
-    spinRemaining.current -= step;
+    if (!propeller.current || reducedMotion.current) return;
+    const boost = Math.min(delta, spinRemaining.current);
+    propeller.current.rotation.y += delta * Math.PI * 2 + boost * Math.PI * 3;
+    spinRemaining.current -= boost;
   });
   return (
     <group position={[0, 1.035, 0]}>

@@ -81,9 +81,9 @@ export const MOCK_DEMO: DemoData = {
   },
   recruiter: {
     id: 'recruiter-1',
-    name: 'Alex Morgan',
-    headline: 'Early Careers Recruiter | Fictional',
+    name: 'Selena Ma',
+    headline: 'Head of Recruiting Programs at OpenAI',
   },
   outreachMessage:
-    'Hi Alex, I recently attended a tech event and would love to connect about opportunities at the intersection of AI, community, and impact.',
+    "Hi Selena, I recently attended a tech event and couldn't help noticing how well my high-agency, growth-oriented mindset aligns with OpenAI's mission. Please feel free to explore my profile for a curated display of the thought leadership I bring to every room. I'd be thrilled to discuss any internship opportunities where I can drive outsized impact from day one. Even a brief reply would be genuinely life-changing; my calendar is remarkably flexible.",
 };

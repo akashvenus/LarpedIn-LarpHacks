@@ -11,12 +11,12 @@ describe('profile and claimed gift', () => {
     const withPhoto = { ...named, photos: { ...named.photos, selfie: 'data:image/jpeg;base64,abc' } };
     expect(demoReducer(withPhoto, { type: 'SET_PROFILE_PHOTO', promptId: 'selfie' }).profilePhoto).toBe('selfie');
   });
-  it('sends the current post when the gift is claimed and keeps that snapshot', () => {
+  it('claims the gift without copying the current post into the message', () => {
     const posted = { ...initialState, postText: 'Original post', postPublished: true };
     const claimed = demoReducer(posted, { type: 'GIFT_ANIMATION_DONE' });
     expect(claimed.giftOpened).toBe(true);
     expect(claimed.outreachSent).toBe(true);
-    expect(claimed.outreachPostText).toBe('Original post');
-    expect(demoReducer(claimed, { type: 'SET_POST_TEXT', text: 'Edited post' }).outreachPostText).toBe('Original post');
+    expect(claimed.outreachPostText).toBe('');
+    expect(claimed.postText).toBe('Original post');
   });
 });

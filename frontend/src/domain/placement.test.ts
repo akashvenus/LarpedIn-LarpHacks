@@ -2,6 +2,13 @@ import { describe, expect, it } from 'vitest';
 import { demoReducer } from './reducer';
 import { unlockedItemIds } from './selectors';
 import { initialState } from './types';
+import { ITEMS_BY_UNLOCK } from './items';
+
+it('orders room items by the progress needed to unlock them', () => {
+  expect(ITEMS_BY_UNLOCK.map((item) => item.id)).toEqual([
+    'stickers', 'notes', 'mug', 'plant', 'books', 'poster', 'pivot', 'whiteboard', 'mousepad', 'vision',
+  ]);
+});
 
 describe('unlockedItemIds', () => {
   it('starts with only the starter item', () => {
@@ -61,6 +68,12 @@ describe('REMOVE_ITEM', () => {
 });
 
 describe('additional room locations', () => {
+  it('places items at different wall heights without changing existing placements', () => {
+    const existing = demoReducer(initialState, { type: 'PLACE_ITEM', itemId: 'stickers', spotId: 'wall-bed' });
+    const high = demoReducer(existing, { type: 'PLACE_ITEM', itemId: 'notes', spotId: 'wall-desk-high-center' });
+    const low = demoReducer(high, { type: 'PLACE_ITEM', itemId: 'notes', spotId: 'wall-back-low-left' });
+    expect(low.placements).toEqual({ 'wall-bed': 'stickers', 'wall-back-low-left': 'notes' });
+  });
   it('places desk items on the shelf, bed, or box and wall items beyond the window', () => {
     const start = { ...initialState, eventId: 'larphacks', standUpSubmitted: true };
     const shelf = demoReducer(start, { type: 'PLACE_ITEM', itemId: 'plant', spotId: 'shelf-top' });

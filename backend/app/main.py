@@ -1,4 +1,5 @@
 from pathlib import Path
+from uuid import UUID
 from ipaddress import ip_address
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
@@ -7,7 +8,9 @@ from fastapi.staticfiles import StaticFiles
 
 from .compose import compose_personal_post, compose_post
 from .content import CONCLUSIONS, DEMO, EVENTS, HASHTAGS, HOOKS, LEARNINGS
-from .db import DatabaseUnavailable, check_db, delete_user_post, list_posts, load_user_state, save_user_state, save_post
+from .db import (DatabaseUnavailable, check_db, delete_browser_post, delete_user_post, list_posts,
+                 load_demo_state, load_user_state, save_demo_state, save_post, save_user_post, save_user_state)
+from .db import StandUpAlreadyPosted, delete_stand_up, list_stand_ups, save_stand_up
 from .gemini import generate_preset
 from .models import (
     AiPresetRequest,
@@ -19,6 +22,7 @@ from .models import (
     DemoStateWrite,
     PostListResponse,
     PostResponse,
+    StandUpRequest,
 )
 
 DIST = Path(__file__).resolve().parents[2] / "frontend" / "dist"
@@ -50,6 +54,33 @@ def get_client_ip(request):
 @app.get("/api/health")
 def health():
     return {"ok": True}
+
+
+@app.get("/api/stand-ups/{client_id}")
+def get_stand_ups(client_id: UUID):
+    try:
+        return {"posts": list_stand_ups(client_id)}
+    except DatabaseUnavailable:
+        raise HTTPException(status_code=503, detail="Database unavailable")
+
+
+@app.post("/api/stand-ups/{client_id}", status_code=201)
+def create_stand_up(client_id: UUID, payload: StandUpRequest):
+    try:
+        return save_stand_up(client_id, payload)
+    except StandUpAlreadyPosted:
+        raise HTTPException(status_code=409, detail="You've already posted a stand-up today")
+    except DatabaseUnavailable:
+        raise HTTPException(status_code=503, detail="Database unavailable")
+
+
+@app.delete("/api/stand-ups/{client_id}/{post_id}", status_code=204)
+def remove_stand_up(client_id: UUID, post_id: int):
+    try:
+        if not delete_stand_up(client_id, post_id):
+            raise HTTPException(status_code=404, detail="Stand-up not found")
+    except DatabaseUnavailable:
+        raise HTTPException(status_code=503, detail="Database unavailable")
 
 
 @app.get("/api/demo")
@@ -111,11 +142,11 @@ def create_post(payload: ComposeRequest, http_request: Request):
 
 
 @app.get("/api/posts", response_model=PostListResponse)
-def get_posts(limit: int | None = None):
+def get_posts(limit: int | None = None, exclude_client_id: UUID | None = None):
     if limit is not None and not 1 <= limit <= 50:
         raise HTTPException(status_code=422, detail="limit must be between 1 and 50")
     try:
-        return {"posts": list_posts(limit)}
+        return {"posts": list_posts(limit, exclude_client_id) if exclude_client_id else list_posts(limit)}
     except DatabaseUnavailable:
         raise HTTPException(status_code=503, detail="Database unavailable")
 
@@ -124,6 +155,42 @@ def get_posts(limit: int | None = None):
 def remove_user_post(request: Request):
     try:
         delete_user_post(get_client_ip(request))
+    except DatabaseUnavailable:
+        raise HTTPException(status_code=503, detail="Database unavailable")
+
+
+@app.put("/api/user-post/{client_id}", response_model=ComposeResponse)
+def put_browser_post(client_id: UUID, request: ComposeRequest):
+    text = compose_from_request(request)
+    try:
+        save_user_post(client_id, request.eventId, text, request.model_dump(mode="json"))
+    except DatabaseUnavailable:
+        raise HTTPException(status_code=503, detail="Database unavailable")
+    return {"text": text}
+
+
+@app.delete("/api/user-post/{client_id}", status_code=204)
+def remove_browser_post(client_id: UUID):
+    try:
+        delete_browser_post(client_id)
+    except DatabaseUnavailable:
+        raise HTTPException(status_code=503, detail="Database unavailable")
+
+
+@app.get("/api/state/{client_id}", response_model=DemoStateResponse)
+def get_browser_state(client_id: UUID):
+    try:
+        return {"state": load_demo_state(client_id)}
+    except DatabaseUnavailable:
+        raise HTTPException(status_code=503, detail="Database unavailable")
+
+
+@app.put("/api/state/{client_id}", response_model=DemoStateResponse)
+def put_browser_state(client_id: UUID, request: DemoStateWrite):
+    try:
+        state = request.state.model_dump(mode="json")
+        save_demo_state(client_id, state)
+        return {"state": state}
     except DatabaseUnavailable:
         raise HTTPException(status_code=503, detail="Database unavailable")
 

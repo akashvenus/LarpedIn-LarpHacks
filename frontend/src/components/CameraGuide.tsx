@@ -7,7 +7,6 @@ export interface CameraGuideProps {
   /** One object URL per prompt (null = not captured yet). */
   photos: Record<PromptId, string | null>;
   onCapture: (blob: Blob, promptId: PromptId) => void;
-  onCheck: (promptId: PromptId) => void;
   onContinue: () => void;
 }
 
@@ -22,8 +21,7 @@ type CamStatus =
 /**
  * Event photo guide (F2). Each of the four prompts has its own 📷 snap
  * button against the shared live preview; a re-snap overwrites that
- * prompt's photo. A small "check without photo" fallback and an
- * always-available continue (skip photos) keep the demo unblockable.
+ * prompt's photo. Continue is always available when photos are skipped.
  *
  * - The camera stays live for the whole screen; tracks stop on unmount.
  * - Failures are classified (denied / no camera / insecure / other) with
@@ -35,7 +33,6 @@ export function CameraGuide({
   completedPrompts,
   photos,
   onCapture,
-  onCheck,
   onContinue,
 }: CameraGuideProps) {
   const videoRef = useRef<HTMLVideoElement>(null);
@@ -122,7 +119,7 @@ export function CameraGuide({
       <header>
         <h1>{event.title} · Photo guide</h1>
         <p className="muted" style={{ margin: 0 }}>
-          {event.dateLabel} · {event.venueLabel} — snap one per checkpoint, or check / skip freely.
+          {event.dateLabel} · {event.venueLabel} — snap one per checkpoint, or skip photos below.
         </p>
       </header>
 
@@ -152,7 +149,7 @@ export function CameraGuide({
             <p>📷 No camera available</p>
             <p className="muted">
               No camera was found on this device (or it is in use by another app). Close other
-              camera apps and retry — or just check / skip the checkpoints below.
+              camera apps and retry, or continue without photos below.
             </p>
             <button className="btn" onClick={() => void startCamera()}>
               Try again
@@ -164,7 +161,7 @@ export function CameraGuide({
             <p>🔒 Camera needs a secure connection</p>
             <p className="muted">
               Browsers only expose the camera over HTTPS (or localhost). Open the deployed URL, or
-              run the app locally, then reload. Checkpoints can still be checked or skipped below.
+              run the app locally, then reload. You can still continue without photos below.
             </p>
           </div>
         )}
@@ -199,6 +196,7 @@ export function CameraGuide({
                       alt={`${p.label} capture`}
                     />
                   )}
+                  {done && <span className="prompt-check" aria-label={`${p.label} complete`}>✓</span>}
                   <button
                     className="btn snap-btn"
                     disabled={!live}
@@ -207,12 +205,6 @@ export function CameraGuide({
                   >
                     📷 {photoUrl ? 'Re-snap' : 'Snap'}
                   </button>
-                  {!done && (
-                    <button className="check-fallback" onClick={() => onCheck(p.id)}>
-                      check without photo
-                    </button>
-                  )}
-                  {done && <span className="prompt-check" aria-label={`${p.label} complete`}>✓</span>}
                 </div>
               </li>
             );

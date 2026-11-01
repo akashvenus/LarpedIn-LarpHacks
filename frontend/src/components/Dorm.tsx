@@ -1,15 +1,20 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { AVATAR_ITEMS } from '../assets/manifest';
 import { ItemId, SpotId } from '../domain/items';
 import { AccessoryId, HeldPropId } from '../domain/gear';
 import { InventoryPanel } from './InventoryPanel';
 import { DormScene } from './room/DormScene';
+import { parseStandUpDraft } from '../domain/standUp';
 
 export interface DormProps {
   xp: number;
   xpPulse: number;
   standUpSubmitted: boolean;
-  standUpBullets: { bullet1: string; bullet2: string } | null;
+  standUpToday: boolean;
+  standUpBusy: boolean;
+  standUpError: string | null;
+  standUpReady: boolean;
+  onRetryStandUps: () => void;
   standUpDraft: string;
   onSubmitStandUp: (bullet1: string, bullet2: string) => void;
   onStandUpDraftChange: (draft: string) => void;
@@ -37,7 +42,11 @@ export function Dorm({
   xp,
   xpPulse,
   standUpSubmitted,
-  standUpBullets,
+  standUpToday,
+  standUpBusy,
+  standUpError,
+  standUpReady,
+  onRetryStandUps,
   standUpDraft,
   onSubmitStandUp,
   onStandUpDraftChange,
@@ -58,8 +67,10 @@ export function Dorm({
   const [inventoryOpen, setInventoryOpen] = useState(false);
   const [carryingId, setCarryingId] = useState<ItemId | null>(null);
   const [isStandUpOpen, setIsStandUpOpen] = useState(false);
-  const [standUp, setStandUp] = useState(standUpDraft);
-  const bullets = standUp.split('\n').map((line) => line.replace(/^\s*[•*-]\s*/, '').trim()).filter(Boolean);
+  const { win, nextStep } = parseStandUpDraft(standUpDraft);
+  const updateDraft = (values: { win: string; nextStep: string }) => onStandUpDraftChange(JSON.stringify(values));
+
+  useEffect(() => { if (standUpToday) setIsStandUpOpen(false); }, [standUpToday]);
 
   const avatarEntry = AVATAR_ITEMS.find((item) => item.id === avatarItem);
 
@@ -85,6 +96,43 @@ export function Dorm({
         </div>
       </header>
 
+      {!standUpToday && (
+        <div className="standup-entry">
+          <button type="button" className="standup-shortcut" aria-expanded={isStandUpOpen}
+            aria-controls="dorm-standup" disabled={!standUpReady} onClick={() => setIsStandUpOpen((open) => !open)}>
+            <span><strong>What's the update, founder?</strong><small>Your daily Stand-Up{!standUpSubmitted && ' · +5 XP'}</small></span>
+            <span aria-hidden>{isStandUpOpen ? '−' : '+'}</span>
+          </button>
+          {!standUpReady && standUpError && <button type="button" className="btn" onClick={onRetryStandUps}>Retry loading Stand-Ups</button>}
+          {!standUpReady && standUpError && <p className="form-error" role="alert">{standUpError}</p>}
+        </div>
+      )}
+      {!standUpToday && isStandUpOpen && (
+        <section className="card dorm-standup" id="dorm-standup">
+          <h3>Your daily Stand-Up</h3>
+          <p className="muted">A little progress report for your very real board of directors.</p>
+          <div className="standup-grid">
+            <label>What did you ship, learn, or survive?
+              <textarea maxLength={500} value={win} placeholder="A win, a lesson, or a close call..." onChange={(e) => updateDraft({ win: e.target.value, nextStep })} />
+            </label>
+            <label>What's on the roadmap?
+              <textarea maxLength={500} value={nextStep} placeholder="Your next move..." onChange={(e) => updateDraft({ win, nextStep: e.target.value })} />
+            </label>
+          </div>
+          <div className="standup-preview" aria-label="Stand-Up post preview">
+            <strong>Feed preview</strong>
+            {win.trim() && <p>The win: {win.trim()}</p>}
+            {nextStep.trim() && <p>Next up: {nextStep.trim()}</p>}
+            {!win.trim() && !nextStep.trim() && <p>Your update will appear here.</p>}
+          </div>
+          {standUpError && <p className="form-error" role="alert">{standUpError}</p>}
+          <button type="button" className="btn btn-primary btn-block" disabled={standUpBusy || !(win.trim() || nextStep.trim())}
+            onClick={() => onSubmitStandUp(win.trim(), nextStep.trim())}>
+            {standUpBusy ? 'Posting…' : 'Post Stand-Up to feed'}
+          </button>
+        </section>
+      )}
+
       <DormScene
         avatar={avatarEntry ?? AVATAR_ITEMS[0]}
         xpPulse={xpPulse}
@@ -109,62 +157,8 @@ export function Dorm({
       </DormScene>
 
       <div className="dorm-cta-row">
-        <button className="btn btn-primary" onClick={onFindEvent}>
-          📅 Find an event
-        </button>
-        <button
-          className="btn"
-          aria-expanded={isStandUpOpen}
-          aria-controls="dorm-standup"
-          onClick={() => setIsStandUpOpen((open) => !open)}
-        >
-          {standUpSubmitted ? '✅ Stand-up' : '📝 Stand-up +5 XP'}
-        </button>
+        <button className="btn btn-primary" onClick={onFindEvent}>📅 Find an event</button>
       </div>
-
-      <section className="card dorm-standup" id="dorm-standup" hidden={!isStandUpOpen}>
-        <h3>Daily stand-up · +5 XP (optional)</h3>
-        <p className="muted">Share a win from today and what you plan to do next.</p>
-        {standUpSubmitted ? (
-          <div className="standup-logged">
-            <p className="standup-done" style={{ margin: 0 }}>
-              ✅ Stand-up logged
-            </p>
-            {standUpBullets && (
-              <ul className="standup-bullets">
-                <li>
-                  <strong>Win (did):</strong> {standUpBullets.bullet1 || '—'}
-                </li>
-                <li>
-                  <strong>Next (todo):</strong> {standUpBullets.bullet2 || '—'}
-                </li>
-              </ul>
-            )}
-          </div>
-        ) : (
-          <>
-            <div className="standup-grid">
-              <textarea
-                placeholder={'• Win (did)\n• Next (todo)'}
-                value={standUp}
-                onChange={(e) => {
-                  setStandUp(e.target.value);
-                  onStandUpDraftChange(e.target.value);
-                }}
-                aria-label="Stand-up: win and next steps"
-              />
-            </div>
-            <button
-              className="btn btn-block"
-              style={{ marginTop: 10 }}
-              disabled={bullets.length === 0}
-              onClick={() => onSubmitStandUp(bullets[0] ?? '', bullets.slice(1).join(' · '))}
-            >
-              Log stand-up
-            </button>
-          </>
-        )}
-      </section>
 
       <InventoryPanel
         open={inventoryOpen}

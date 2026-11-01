@@ -1,5 +1,5 @@
 import { ASSETS } from '../../assets/manifest';
-import { ItemId, ITEMS, SpotId } from '../../domain/items';
+import { ItemId, ITEMS_BY_UNLOCK, SpotId } from '../../domain/items';
 
 export interface ItemBoxPanelProps {
   unlockedItemIds: ItemId[];
@@ -21,7 +21,7 @@ export function ItemBoxPanel({ unlockedItemIds, placements, onPick, onClose }: I
         </button>
       </div>
       <div className="room-box-grid">
-        {ITEMS.map((item) => {
+        {ITEMS_BY_UNLOCK.map((item) => {
           const isUnlocked = unlockedItemIds.includes(item.id);
           const isPlaced = placedIds.includes(item.id);
           return (
