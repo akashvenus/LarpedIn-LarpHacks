@@ -6,7 +6,7 @@ import { ITEMS_BY_UNLOCK } from './items';
 
 it('orders room items by the progress needed to unlock them', () => {
   expect(ITEMS_BY_UNLOCK.map((item) => item.id)).toEqual([
-    'stickers', 'notes', 'mug', 'plant', 'books', 'poster', 'pivot', 'whiteboard', 'mousepad', 'vision',
+    'sama-lisa', 'stickers', 'notes', 'mug', 'plant', 'books', 'poster', 'pivot', 'whiteboard', 'mousepad', 'vision',
   ]);
 });
 

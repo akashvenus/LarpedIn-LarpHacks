@@ -64,7 +64,7 @@ export const ITEMS: readonly RoomItem[] = [
 
 // These are ordering values; each item's actual unlock still depends on its action.
 const UNLOCK_ORDER: Record<ItemId, number> = {
-  stickers: 0, notes: 0,
+  stickers: 0, 'sama-lisa': 0, notes: 0,
   mug: 5, plant: 5, books: 5,
   poster: 20, pivot: 20, whiteboard: 20,
   mousepad: 60, vision: 60,
