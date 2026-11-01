@@ -10,6 +10,7 @@ from .compose import compose_personal_post, compose_post
 from .content import CONCLUSIONS, DEMO, EVENTS, HASHTAGS, HOOKS, LEARNINGS
 from .db import (DatabaseUnavailable, check_db, delete_browser_post, delete_user_post, list_posts,
                  load_demo_state, load_user_state, save_demo_state, save_post, save_user_post, save_user_state)
+from .db import StandUpAlreadyPosted, delete_stand_up, list_stand_ups, save_stand_up
 from .gemini import generate_preset
 from .models import (
     AiPresetRequest,
@@ -21,6 +22,7 @@ from .models import (
     DemoStateWrite,
     PostListResponse,
     PostResponse,
+    StandUpRequest,
 )
 
 DIST = Path(__file__).resolve().parents[2] / "frontend" / "dist"
@@ -52,6 +54,33 @@ def get_client_ip(request):
 @app.get("/api/health")
 def health():
     return {"ok": True}
+
+
+@app.get("/api/stand-ups/{client_id}")
+def get_stand_ups(client_id: UUID):
+    try:
+        return {"posts": list_stand_ups(client_id)}
+    except DatabaseUnavailable:
+        raise HTTPException(status_code=503, detail="Database unavailable")
+
+
+@app.post("/api/stand-ups/{client_id}", status_code=201)
+def create_stand_up(client_id: UUID, payload: StandUpRequest):
+    try:
+        return save_stand_up(client_id, payload)
+    except StandUpAlreadyPosted:
+        raise HTTPException(status_code=409, detail="You've already posted a stand-up today")
+    except DatabaseUnavailable:
+        raise HTTPException(status_code=503, detail="Database unavailable")
+
+
+@app.delete("/api/stand-ups/{client_id}/{post_id}", status_code=204)
+def remove_stand_up(client_id: UUID, post_id: int):
+    try:
+        if not delete_stand_up(client_id, post_id):
+            raise HTTPException(status_code=404, detail="Stand-up not found")
+    except DatabaseUnavailable:
+        raise HTTPException(status_code=503, detail="Database unavailable")
 
 
 @app.get("/api/demo")

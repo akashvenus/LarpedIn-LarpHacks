@@ -9,6 +9,81 @@ class DatabaseUnavailable(Exception):
     pass
 
 
+class StandUpAlreadyPosted(Exception):
+    pass
+
+
+CREATE_STAND_UPS_TABLE = """
+CREATE TABLE IF NOT EXISTS stand_up_posts (
+    id BIGSERIAL PRIMARY KEY,
+    client_id UUID NOT NULL,
+    local_date DATE NOT NULL,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+    name TEXT NOT NULL,
+    headline TEXT NOT NULL,
+    win TEXT NOT NULL,
+    next_step TEXT NOT NULL,
+    UNIQUE (client_id, local_date)
+)
+"""
+
+
+def _stand_up(row, client_id):
+    return {
+        "id": row["id"], "createdAt": row["created_at"],
+        "localDate": row["local_date"].isoformat(), "name": row["name"],
+        "headline": row["headline"], "win": row["win"],
+        "nextStep": row["next_step"], "isOwn": row["client_id"] == client_id,
+    }
+
+
+def list_stand_ups(client_id):
+    try:
+        with _connect() as conn:
+            conn.execute(CREATE_STAND_UPS_TABLE)
+            rows = conn.execute("SELECT * FROM stand_up_posts ORDER BY created_at DESC, id DESC").fetchall()
+            return [_stand_up(row, client_id) for row in rows]
+    except psycopg.Error as error:
+        raise DatabaseUnavailable("Could not load stand-ups") from error
+
+
+def save_stand_up(client_id, payload):
+    try:
+        with _connect() as conn:
+            conn.execute(CREATE_STAND_UPS_TABLE)
+            row = conn.execute(
+                """INSERT INTO stand_up_posts (client_id, local_date, name, headline, win, next_step)
+                   VALUES (%s, %s, %s, %s, %s, %s) RETURNING *""",
+                (client_id, payload.localDate, payload.name.strip(), payload.headline.strip(),
+                 payload.win.strip(), payload.nextStep.strip()),
+            ).fetchone()
+            conn.execute(CREATE_DEMO_STATES_TABLE)
+            conn.execute(
+                """UPDATE demo_states SET state = state || %s, updated_at = now()
+                   WHERE client_id = %s AND NOT COALESCE((state->>'standUpSubmitted')::boolean, false)""",
+                (Jsonb({"standUpSubmitted": True, "standUpBullets": {
+                    "bullet1": payload.win.strip(), "bullet2": payload.nextStep.strip(),
+                }}), client_id),
+            )
+            return _stand_up(row, client_id)
+    except psycopg.errors.UniqueViolation as error:
+        raise StandUpAlreadyPosted from error
+    except psycopg.Error as error:
+        raise DatabaseUnavailable("Could not save stand-up") from error
+
+
+def delete_stand_up(client_id, post_id):
+    try:
+        with _connect() as conn:
+            conn.execute(CREATE_STAND_UPS_TABLE)
+            return conn.execute(
+                "DELETE FROM stand_up_posts WHERE id = %s AND client_id = %s RETURNING id",
+                (post_id, client_id),
+            ).fetchone() is not None
+    except psycopg.Error as error:
+        raise DatabaseUnavailable("Could not delete stand-up") from error
+
+
 CREATE_TABLE = """
 CREATE TABLE IF NOT EXISTS posts (
     id BIGSERIAL PRIMARY KEY,

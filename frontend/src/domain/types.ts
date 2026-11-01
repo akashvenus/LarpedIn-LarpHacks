@@ -47,6 +47,17 @@ export interface CommunityPost {
   text: string;
 }
 
+export interface StandUpPost {
+  id: number;
+  createdAt: string;
+  localDate: string;
+  name: string;
+  headline: string;
+  win: string;
+  nextStep: string;
+  isOwn: boolean;
+}
+
 export type ComposerTextSlot = 'hook' | 'moment' | 'person' | 'nextStep' | 'conclusion';
 export type ComposerAnswer = { value: string; id?: string; custom: boolean };
 export type ComposerDraft = {

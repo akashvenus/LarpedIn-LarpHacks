@@ -1,5 +1,5 @@
 /// <reference types="vite/client" />
-import { AiPreset, CommunityPost, ComposerInput, DemoData, DemoState } from './domain/types';
+import { AiPreset, CommunityPost, ComposerInput, DemoData, DemoState, StandUpPost } from './domain/types';
 import { MOCK_DEMO } from './demo/mockDemo';
 
 /**
@@ -17,6 +17,25 @@ export class ApiError extends Error {}
 const CLIENT_ID_KEY = 'larpedin-client-id';
 
 const apiBase = import.meta.env.DEV ? 'http://127.0.0.1:8000' : '';
+
+export async function fetchStandUps(clientId: string): Promise<StandUpPost[]> {
+  const res = await fetch(`${apiBase}/api/stand-ups/${encodeURIComponent(clientId)}`);
+  const body = await parseJson(res) as { posts: StandUpPost[] };
+  return body.posts;
+}
+
+export async function publishStandUp(clientId: string, input: Pick<StandUpPost, 'localDate' | 'name' | 'headline' | 'win' | 'nextStep'>): Promise<StandUpPost> {
+  const res = await fetch(`${apiBase}/api/stand-ups/${encodeURIComponent(clientId)}`, {
+    method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(input),
+  });
+  if (res.status === 409) throw new ApiError('You already posted a Stand-Up today.');
+  return await parseJson(res) as StandUpPost;
+}
+
+export async function deleteStandUp(clientId: string, postId: number): Promise<void> {
+  const res = await fetch(`${apiBase}/api/stand-ups/${encodeURIComponent(clientId)}/${postId}`, { method: 'DELETE' });
+  if (!res.ok) throw new ApiError(`Could not delete Stand-Up: ${res.status}`);
+}
 
 async function parseJson(res: Response): Promise<unknown> {
   if (!res.ok) {

@@ -1,5 +1,5 @@
 import { ASSETS } from '../assets/manifest';
-import { CommunityPost, PhotoRef, PROMPTS, PromptId } from '../domain/types';
+import { CommunityPost, PhotoRef, PROMPTS, PromptId, StandUpPost } from '../domain/types';
 
 export interface SocialDemoProps {
   profile: { id: string; name: string; headline: string };
@@ -11,6 +11,10 @@ export interface SocialDemoProps {
   profilePhoto: PromptId | null;
   onSelectPhoto: (promptId: PromptId) => void;
   communityPosts: CommunityPost[];
+  standUps: StandUpPost[];
+  standUpBusy: boolean;
+  standUpError: string | null;
+  onDeleteStandUp: (post: StandUpPost) => void;
   feedError: string | null;
   onPublish: (text: string) => void;
   onEdit?: () => void;
@@ -34,6 +38,10 @@ export function SocialDemo({
   profilePhoto,
   onSelectPhoto,
   communityPosts,
+  standUps,
+  standUpBusy,
+  standUpError,
+  onDeleteStandUp,
   feedError,
   onPublish,
   onEdit,
@@ -57,22 +65,36 @@ export function SocialDemo({
       </div>
     ) : null;
 
+  const feedItems = [
+    ...communityPosts.map((post) => ({ type: 'event' as const, post })),
+    ...standUps.map((post) => ({ type: 'standup' as const, post })),
+  ].sort((a, b) => Date.parse(b.post.createdAt) - Date.parse(a.post.createdAt));
+
   const communityFeed = (
     <section className="card">
       <h3>Community feed</h3>
       {feedError && <p className="form-error" role="alert">{feedError}</p>}
-      {!feedError && communityPosts.length === 0 && <p className="muted">No community posts yet.</p>}
-      {communityPosts.map((post) => (
-        <article className="feed-post community-post" key={post.id}>
+      {standUpError && <p className="form-error" role="alert">{standUpError}</p>}
+      {!feedError && feedItems.length === 0 && <p className="muted">No community posts yet.</p>}
+      {feedItems.map((item) => item.type === 'standup' ? (
+        <article className="feed-post community-post" key={`standup-${item.post.id}`}>
+          <div className="feed-head">
+            <img className="feed-avatar" src={item.post.isOwn ? avatar : ASSETS.avatar} alt="" />
+            <div><strong>{item.post.name}</strong><div className="muted feed-time">{item.post.headline} · {new Date(item.post.createdAt).toLocaleString()}</div></div>
+            {item.post.isOwn && <button type="button" className="post-delete" aria-label="Delete Stand-Up" title="Delete Stand-Up" disabled={standUpBusy} onClick={() => onDeleteStandUp(item.post)}>🗑️</button>}
+          </div>
+          <p className="muted feed-time">Daily Stand-Up</p>
+          {item.post.win && <p className="feed-text"><strong>The win: </strong>{item.post.win}</p>}
+          {item.post.nextStep && <p className="feed-text"><strong>Next up: </strong>{item.post.nextStep}</p>}
+        </article>
+      ) : (
+        <article className="feed-post community-post" key={`event-${item.post.id}`}>
           <div className="feed-head">
             <img className="feed-avatar" src={ASSETS.avatar} alt="" />
-            <div>
-              <strong>Community member</strong>
-              <div className="muted feed-time">{new Date(post.createdAt).toLocaleString()}</div>
-            </div>
+            <div><strong>Community member</strong><div className="muted feed-time">{new Date(item.post.createdAt).toLocaleString()}</div></div>
           </div>
-          <p className="muted feed-time">Event · {post.eventId}</p>
-          <p className="feed-text">{post.text}</p>
+          <p className="muted feed-time">Event · {item.post.eventId}</p>
+          <p className="feed-text">{item.post.text}</p>
         </article>
       ))}
     </section>

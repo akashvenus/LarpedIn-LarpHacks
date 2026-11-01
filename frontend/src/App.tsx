@@ -10,6 +10,7 @@ import {
   saveDemoState,
   saveBrowserPost,
   deleteUserPost,
+  fetchStandUps, publishStandUp, deleteStandUp,
 } from './api';
 import { CameraGuide } from './components/CameraGuide';
 import { Dorm } from './components/Dorm';
@@ -22,9 +23,12 @@ import { SocialDemo } from './components/SocialDemo';
 import { Trophies } from './components/Trophies';
 import { demoReducer, initialState } from './domain/reducer';
 import { badgeUnlocked, derivedXp, micUnlocked, photoList, unlockedItemIds } from './domain/selectors';
-import { CommunityPost, ComposerInput, DemoData, DemoState, PromptId } from './domain/types';
+import { CommunityPost, ComposerInput, DemoData, DemoState, PromptId, StandUpPost } from './domain/types';
+import { hasStandUpToday, localDay } from './domain/standUp';
 import { MOCK_DEMO } from './demo/mockDemo';
 import { loadLocalDemo, saveLocalDemo } from './demo/localDemo';
+
+const LOCAL_STAND_UPS_KEY = 'larpedin-local-stand-ups';
 
 const isLocalDemo = /^\/demo\/?$/.test(window.location.pathname);
 
@@ -48,6 +52,12 @@ export default function App() {
   const [saveError, setSaveError] = useState<string | null>(null);
   const [feedError, setFeedError] = useState<string | null>(null);
   const [communityPosts, setCommunityPosts] = useState<CommunityPost[]>([]);
+  const [standUps, setStandUps] = useState<StandUpPost[]>([]);
+  const [standUpsReady, setStandUpsReady] = useState(false);
+  const [standUpError, setStandUpError] = useState<string | null>(null);
+  const [standUpBusy, setStandUpBusy] = useState(false);
+  const [today, setToday] = useState(() => localDay());
+  const standUpOperation = useRef(false);
   const [saving, setSaving] = useState(false);
   const [loadAttempt, setLoadAttempt] = useState(0);
   const clientId = useRef<string | null>(null);
@@ -70,6 +80,41 @@ export default function App() {
   const navigate = useCallback((next: Screen) => {
     setScreen(next);
     dispatch({ type: 'SET_CURRENT_SCREEN', screen: next });
+  }, []);
+
+  const refreshStandUps = useCallback(async () => {
+    try {
+      const posts = isLocalDemo
+        ? JSON.parse(window.localStorage.getItem(LOCAL_STAND_UPS_KEY) || '[]') as StandUpPost[]
+        : await fetchStandUps(clientId.current!);
+      setStandUps(posts);
+      setStandUpsReady(true);
+      setStandUpError(null);
+    } catch {
+      setStandUpsReady(false);
+      setStandUpError('Could not load Stand-Ups. Try again.');
+    }
+  }, []);
+
+  useEffect(() => {
+    if (stateLoaded && (isLocalDemo || clientId.current)) void refreshStandUps();
+  }, [stateLoaded, refreshStandUps]);
+
+  useEffect(() => {
+    if (stateLoaded && screen === 'social' && (isLocalDemo || clientId.current)) void refreshStandUps();
+  }, [stateLoaded, screen, refreshStandUps]);
+
+  useEffect(() => {
+    if (!stateLoaded || !standUpsReady || state.standUpSubmitted) return;
+    const ownPost = standUps.find((post) => post.isOwn);
+    if (ownPost) dispatch({ type: 'SUBMIT_STAND_UP', bullet1: ownPost.win, bullet2: ownPost.nextStep });
+  }, [stateLoaded, standUpsReady, standUps, state.standUpSubmitted]);
+
+  useEffect(() => {
+    const timer = window.setInterval(() => setToday(localDay()), 30000);
+    const update = () => setToday(localDay());
+    window.addEventListener('focus', update);
+    return () => { window.clearInterval(timer); window.removeEventListener('focus', update); };
   }, []);
 
   useEffect(() => {
@@ -312,6 +357,53 @@ export default function App() {
     }
   };
 
+  const handleStandUp = async (win: string, nextStep: string) => {
+    if (standUpOperation.current || postOperation.current || !standUpsReady || hasStandUpToday(standUps) || !(win.trim() || nextStep.trim())) return;
+    standUpOperation.current = true;
+    postOperation.current = true;
+    setStandUpBusy(true);
+    setStandUpError(null);
+    try {
+      const input = { localDate: localDay(), name: state.name, headline: state.occupation, win, nextStep };
+      let post: StandUpPost;
+      if (isLocalDemo) {
+        post = { ...input, id: Date.now(), createdAt: new Date().toISOString(), isOwn: true };
+        window.localStorage.setItem(LOCAL_STAND_UPS_KEY, JSON.stringify([post, ...standUps]));
+      } else {
+        await saveQueue.current;
+        post = await publishStandUp(clientId.current!, input);
+      }
+      setStandUps((posts) => [post, ...posts]);
+      dispatch({ type: 'SUBMIT_STAND_UP', bullet1: win, bullet2: nextStep });
+      dispatch({ type: 'SET_STAND_UP_DRAFT', draft: '' });
+      setToday(localDay());
+    } catch (err) {
+      if (err instanceof Error && err.message.includes('already posted')) await refreshStandUps();
+      setStandUpError(err instanceof Error ? err.message : 'Could not post your Stand-Up. Try again.');
+    } finally {
+      standUpOperation.current = false;
+      postOperation.current = false;
+      setStandUpBusy(false);
+    }
+  };
+
+  const handleDeleteStandUp = async (post: StandUpPost) => {
+    if (standUpOperation.current || !post.isOwn) return;
+    standUpOperation.current = true;
+    setStandUpBusy(true);
+    setStandUpError(null);
+    try {
+      if (isLocalDemo) window.localStorage.setItem(LOCAL_STAND_UPS_KEY, JSON.stringify(standUps.filter((item) => item.id !== post.id)));
+      else await deleteStandUp(clientId.current!, post.id);
+      setStandUps((posts) => posts.filter((item) => item.id !== post.id));
+    } catch (err) {
+      setStandUpError(err instanceof Error ? err.message : 'Could not delete your Stand-Up.');
+    } finally {
+      standUpOperation.current = false;
+      setStandUpBusy(false);
+    }
+  };
+
   const handleComposed = (text: string, input: ComposerInput) => {
     if (editingPost) {
       setReplacement({ text, input });
@@ -330,15 +422,19 @@ export default function App() {
           {isLocalDemo ? saveError : `Progress could not be saved to the database: ${saveError}`}
         </div>
       )}
-      {!saveError && saving && <div className="persistence-status">Saving progress…</div>}
+      {!saveError && saving && <div className="persistence-status" role="status" aria-label="Saving progress"><span aria-hidden="true" /></div>}
       {screen === 'dorm' && (
         <Dorm
           xp={xp}
           xpPulse={xpPulse}
           standUpSubmitted={state.standUpSubmitted}
-          standUpBullets={state.standUpBullets}
+          standUpToday={standUps.some((post) => post.isOwn && post.localDate === today)}
+          standUpBusy={standUpBusy}
+          standUpError={standUpError}
+          standUpReady={standUpsReady}
+          onRetryStandUps={() => void refreshStandUps()}
           standUpDraft={state.standUpDraft}
-          onSubmitStandUp={(b1, b2) => dispatch({ type: 'SUBMIT_STAND_UP', bullet1: b1, bullet2: b2 })}
+          onSubmitStandUp={(b1, b2) => void handleStandUp(b1, b2)}
           onStandUpDraftChange={(draft) => dispatch({ type: 'SET_STAND_UP_DRAFT', draft })}
           onFindEvent={() => navigate('events')}
           avatarItem={state.avatarItem}
@@ -457,6 +553,10 @@ export default function App() {
             replacing={editingPost}
             onCancelReplace={() => { setEditingPost(false); setReplacement(null); }}
             communityPosts={communityPosts}
+            standUps={standUps}
+            standUpBusy={standUpBusy}
+            standUpError={standUpError}
+            onDeleteStandUp={(post) => void handleDeleteStandUp(post)}
             feedError={feedError}
           />}
         </div>

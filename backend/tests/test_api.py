@@ -472,3 +472,66 @@ def test_shared_feed_can_exclude_the_current_browser(monkeypatch):
     response = client.get('/api/posts', params={'exclude_client_id': browser_id})
     assert response.status_code == 200 and response.json() == {'posts': []}
     assert captured['id'] == browser_id
+
+
+def test_stand_up_routes_keep_daily_posts_separate_and_owned(monkeypatch):
+    from app import main
+
+    posts = []
+    first = '11111111-1111-4111-8111-111111111111'
+    second = '22222222-2222-4222-8222-222222222222'
+
+    def save(client_id, payload):
+        if any(p['client'] == str(client_id) and p['localDate'] == payload.localDate.isoformat() for p in posts):
+            raise main.StandUpAlreadyPosted()
+        post = {'id': len(posts) + 1, 'client': str(client_id), 'localDate': payload.localDate.isoformat(),
+                'createdAt': '2026-01-02T12:00:00Z', 'name': payload.name, 'headline': payload.headline,
+                'win': payload.win, 'nextStep': payload.nextStep}
+        posts.append(post)
+        return {**post, 'isOwn': True}
+
+    def listing(client_id):
+        return [{**post, 'isOwn': post['client'] == str(client_id)} for post in posts]
+
+    def remove(client_id, post_id):
+        match = next((p for p in posts if p['id'] == post_id and p['client'] == str(client_id)), None)
+        if not match:
+            return False
+        posts.remove(match)
+        return True
+
+    monkeypatch.setattr(main, 'save_stand_up', save)
+    monkeypatch.setattr(main, 'list_stand_ups', listing)
+    monkeypatch.setattr(main, 'delete_stand_up', remove)
+    payload = {'localDate': '2026-01-02', 'name': 'Sam', 'headline': 'Builder', 'win': 'Shipped', 'nextStep': ''}
+    assert client.post(f'/api/stand-ups/{first}', json=payload).status_code == 201
+    assert client.post(f'/api/stand-ups/{first}', json=payload).status_code == 409
+    assert client.post(f'/api/stand-ups/{second}', json=payload).status_code == 201
+    assert client.post(f'/api/stand-ups/{first}', json={**payload, 'localDate': '2026-01-03'}).status_code == 201
+    listed = client.get(f'/api/stand-ups/{first}').json()['posts']
+    assert [p['isOwn'] for p in listed] == [True, False, True]
+    assert client.delete(f'/api/stand-ups/{second}/1').status_code == 404
+    assert client.delete(f'/api/stand-ups/{first}/1').status_code == 204
+    assert client.post(f'/api/stand-ups/{first}', json=payload).status_code == 201
+
+
+def test_stand_up_validation_and_database_failure(monkeypatch):
+    from app import main
+
+    identity = '11111111-1111-4111-8111-111111111111'
+    url = f'/api/stand-ups/{identity}'
+    payload = {'localDate': '2026-01-02', 'name': 'Sam', 'headline': 'Builder', 'win': ' ', 'nextStep': ''}
+    assert client.post(url, json=payload).status_code == 422
+    assert client.post(url, json={**payload, 'win': 'a' * 501}).status_code == 422
+    assert client.post(url, json={**payload, 'win': 'fine', 'localDate': 'invalid'}).status_code == 422
+    assert client.get('/api/stand-ups/not-a-uuid').status_code == 422
+
+    def unavailable(*args):
+        raise main.DatabaseUnavailable()
+
+    monkeypatch.setattr(main, 'list_stand_ups', unavailable)
+    monkeypatch.setattr(main, 'save_stand_up', unavailable)
+    monkeypatch.setattr(main, 'delete_stand_up', unavailable)
+    assert client.get(url).status_code == 503
+    assert client.post(url, json={**payload, 'win': 'fine'}).status_code == 503
+    assert client.delete(f'{url}/1').status_code == 503
