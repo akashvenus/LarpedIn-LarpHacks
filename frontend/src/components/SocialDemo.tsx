@@ -1,5 +1,5 @@
 import { ASSETS } from '../assets/manifest';
-import { PhotoRef, PROMPTS, PromptId } from '../domain/types';
+import { CommunityPost, PhotoRef, PROMPTS, PromptId } from '../domain/types';
 
 export interface SocialDemoProps {
   profile: { id: string; name: string; headline: string };
@@ -10,6 +10,8 @@ export interface SocialDemoProps {
   published: boolean;
   profilePhoto: PromptId | null;
   onSelectPhoto: (promptId: PromptId) => void;
+  communityPosts: CommunityPost[];
+  feedError: string | null;
   onPublish: (text: string) => void;
   onEdit?: () => void;
   onReplace?: () => void;
@@ -31,6 +33,8 @@ export function SocialDemo({
   published,
   profilePhoto,
   onSelectPhoto,
+  communityPosts,
+  feedError,
   onPublish,
   onEdit,
   onReplace,
@@ -53,10 +57,32 @@ export function SocialDemo({
       </div>
     ) : null;
 
+  const communityFeed = (
+    <section className="card">
+      <h3>Community feed</h3>
+      {feedError && <p className="form-error" role="alert">{feedError}</p>}
+      {!feedError && communityPosts.length === 0 && <p className="muted">No community posts yet.</p>}
+      {communityPosts.map((post) => (
+        <article className="feed-post community-post" key={post.id}>
+          <div className="feed-head">
+            <img className="feed-avatar" src={ASSETS.avatar} alt="" />
+            <div>
+              <strong>Community member</strong>
+              <div className="muted feed-time">{new Date(post.createdAt).toLocaleString()}</div>
+            </div>
+          </div>
+          <p className="muted feed-time">Event · {post.eventId}</p>
+          <p className="feed-text">{post.text}</p>
+        </article>
+      ))}
+    </section>
+  );
+
   return (
     <div className="social">
       {error && <p className="post-action-error" role="alert">{error}</p>}
       {!published ? (
+        <>
         <section className="card">
           <h3>Your post · draft</h3>
           <article className="feed-post">
@@ -99,6 +125,8 @@ export function SocialDemo({
           </button>
           {replacing && <button type="button" className="btn btn-block social-edit" onClick={onCancelReplace} disabled={busy}>Cancel replacement</button>}
         </section>
+        {communityFeed}
+        </>
       ) : (
         <>
           <section className="card">
@@ -122,6 +150,7 @@ export function SocialDemo({
               </div>
             </article>
           </section>
+          {communityFeed}
 
 
         </>

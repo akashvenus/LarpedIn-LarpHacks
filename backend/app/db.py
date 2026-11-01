@@ -13,6 +13,7 @@ CREATE_TABLE = """
 CREATE TABLE IF NOT EXISTS posts (
     id BIGSERIAL PRIMARY KEY,
     created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+    author_ip INET,
     event_id TEXT NOT NULL,
     hook_id TEXT NOT NULL,
     learning_ids TEXT[] NOT NULL,
@@ -22,13 +23,16 @@ CREATE TABLE IF NOT EXISTS posts (
 )
 """
 
-CREATE_DEMO_STATES_TABLE = """
-CREATE TABLE IF NOT EXISTS demo_states (
-    client_id UUID PRIMARY KEY,
+CREATE_USERS_TABLE = """
+CREATE TABLE IF NOT EXISTS users (
+    ip_address INET PRIMARY KEY,
     state JSONB NOT NULL,
     updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
 )
 """
+
+ADD_POST_AUTHOR_IP = "ALTER TABLE posts ADD COLUMN IF NOT EXISTS author_ip INET"
+UNIQUE_POST_PER_USER = "CREATE UNIQUE INDEX IF NOT EXISTS posts_author_ip_unique ON posts(author_ip) WHERE author_ip IS NOT NULL"
 
 
 def _connect():
@@ -54,38 +58,45 @@ def _post(row):
     }
 
 
-def save_post(event_id, hook_id, learning_ids, conclusion_id, hashtag_ids, text):
+def save_post(author_ip, event_id, hook_id, learning_ids, conclusion_id, hashtag_ids, text):
     try:
         with _connect() as conn:
             conn.execute(CREATE_TABLE)
+            conn.execute(ADD_POST_AUTHOR_IP)
+            conn.execute(UNIQUE_POST_PER_USER)
             row = conn.execute(
                 """
                 INSERT INTO posts
-                    (event_id, hook_id, learning_ids, conclusion_id, hashtag_ids, post_text)
-                VALUES (%s, %s, %s, %s, %s, %s)
+                    (author_ip, event_id, hook_id, learning_ids, conclusion_id, hashtag_ids, post_text)
+                VALUES (%s, %s, %s, %s, %s, %s, %s)
+                ON CONFLICT (author_ip) WHERE author_ip IS NOT NULL DO UPDATE SET
+                    created_at = now(), event_id = EXCLUDED.event_id, hook_id = EXCLUDED.hook_id,
+                    learning_ids = EXCLUDED.learning_ids, conclusion_id = EXCLUDED.conclusion_id,
+                    hashtag_ids = EXCLUDED.hashtag_ids, post_text = EXCLUDED.post_text
                 RETURNING id, created_at, event_id, hook_id, learning_ids,
                           conclusion_id, hashtag_ids, post_text
                 """,
-                (event_id, hook_id, learning_ids, conclusion_id, hashtag_ids, text),
+                (author_ip, event_id, hook_id, learning_ids, conclusion_id, hashtag_ids, text),
             ).fetchone()
     except psycopg.Error as error:
         raise DatabaseUnavailable("Could not save post") from error
     return _post(row)
 
 
-def list_posts(limit):
+def list_posts(limit=None):
     try:
         with _connect() as conn:
             conn.execute(CREATE_TABLE)
-            rows = conn.execute(
-                """
+            conn.execute(ADD_POST_AUTHOR_IP)
+            conn.execute(UNIQUE_POST_PER_USER)
+            query = """
                 SELECT id, created_at, event_id, hook_id, learning_ids,
                        conclusion_id, hashtag_ids, post_text
                 FROM posts
                 ORDER BY created_at DESC, id DESC
-                LIMIT %s
-                """,
-                (limit,),
+                """
+            rows = conn.execute(query).fetchall() if limit is None else conn.execute(
+                query + " LIMIT %s", (limit,)
             ).fetchall()
     except psycopg.Error as error:
         raise DatabaseUnavailable("Could not load posts") from error
@@ -100,80 +111,51 @@ def check_db():
         raise DatabaseUnavailable("Database check failed") from error
 
 
-def load_demo_state(client_id):
+def load_user_state(ip_address):
     try:
         with _connect() as conn:
-            conn.execute(CREATE_DEMO_STATES_TABLE)
+            conn.execute(CREATE_USERS_TABLE)
             row = conn.execute(
-                "SELECT state FROM demo_states WHERE client_id = %s",
-                (client_id,),
+                "SELECT state FROM users WHERE ip_address = %s",
+                (ip_address,),
             ).fetchone()
     except psycopg.Error as error:
         raise DatabaseUnavailable("Could not load saved progress") from error
     return row["state"] if row else None
 
 
-def save_demo_state(client_id, state):
+def save_user_state(ip_address, state):
     try:
         with _connect() as conn:
-            conn.execute(CREATE_DEMO_STATES_TABLE)
+            conn.execute(CREATE_USERS_TABLE)
             conn.execute(
                 """
-                INSERT INTO demo_states (client_id, state)
+                INSERT INTO users (ip_address, state)
                 VALUES (%s, %s)
-                ON CONFLICT (client_id) DO UPDATE
+                ON CONFLICT (ip_address) DO UPDATE
                 SET state = EXCLUDED.state, updated_at = now()
                 """,
-                (client_id, Jsonb(state)),
+                (ip_address, Jsonb(state)),
             )
     except psycopg.Error as error:
         raise DatabaseUnavailable("Could not save progress") from error
 
 
-CREATE_USER_POSTS = """
-CREATE TABLE IF NOT EXISTS user_posts (
-    client_id UUID PRIMARY KEY,
-    event_id TEXT NOT NULL,
-    post_text TEXT NOT NULL,
-    updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
-)
-"""
-
-
-def save_user_post(client_id, event_id, text, composer_input):
+def delete_user_post(author_ip):
     try:
         with _connect() as conn:
-            conn.execute(CREATE_USER_POSTS)
+            conn.execute("DELETE FROM posts WHERE author_ip = %s", (author_ip,))
+            conn.execute(CREATE_USERS_TABLE)
             conn.execute(
-                """INSERT INTO user_posts (client_id, event_id, post_text)
-                   VALUES (%s, %s, %s)
-                   ON CONFLICT (client_id) DO UPDATE SET
-                     event_id = EXCLUDED.event_id, post_text = EXCLUDED.post_text,
-                     updated_at = now()""",
-                (client_id, event_id, text),
-            )
-            conn.execute(CREATE_DEMO_STATES_TABLE)
-            conn.execute(
-                """UPDATE demo_states SET state = state || %s, updated_at = now()
-                   WHERE client_id = %s""",
-                (Jsonb({"postText": text, "postPublished": True, "composerInput": composer_input}), client_id),
-            )
-    except psycopg.Error as error:
-        raise DatabaseUnavailable("Could not save post") from error
-
-
-def delete_user_post(client_id):
-    try:
-        with _connect() as conn:
-            conn.execute(CREATE_USER_POSTS)
-            conn.execute(CREATE_DEMO_STATES_TABLE)
-            conn.execute("DELETE FROM user_posts WHERE client_id = %s", (client_id,))
-            conn.execute(
-                """UPDATE demo_states SET state = state || %s, updated_at = now()
-                   WHERE client_id = %s""",
-                (Jsonb({"postText": "", "postPublished": False, "composerInput": None,
-                       "composerDraft": {"answers": {}, "hashtagIds": [], "active": "hook", "customOpen": False, "customDraft": ""},
-                       "selections": {"hookId": None, "learningIds": [], "conclusionId": None, "hashtagIds": []}}), client_id),
+                """UPDATE users SET state = state || %s, updated_at = now()
+                   WHERE ip_address = %s""",
+                (Jsonb({
+                    "postText": "",
+                    "postPublished": False,
+                    "composerInput": None,
+                    "composerDraft": {"answers": {}, "hashtagIds": [], "active": "hook", "customOpen": False, "customDraft": ""},
+                    "selections": {"hookId": None, "learningIds": [], "conclusionId": None, "hashtagIds": []},
+                }), author_ip),
             )
     except psycopg.Error as error:
         raise DatabaseUnavailable("Could not delete post") from error

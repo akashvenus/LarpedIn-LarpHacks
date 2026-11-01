@@ -35,6 +35,17 @@ export interface ComposerInput {
   nextStep?: string;
 }
 
+export interface CommunityPost {
+  id: number;
+  createdAt: string;
+  eventId: string;
+  hookId: string;
+  learningIds: string[];
+  conclusionId: string;
+  hashtagIds: string[];
+  text: string;
+}
+
 export type ComposerTextSlot = 'hook' | 'moment' | 'person' | 'nextStep' | 'conclusion';
 export type ComposerAnswer = { value: string; id?: string; custom: boolean };
 export type ComposerDraft = {
