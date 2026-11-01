@@ -137,6 +137,25 @@ WHERE post.author_client_id = saved.client_id
       WHERE photo.photo_url LIKE 'data:image/%'
   )
 """
+BACKFILL_POST_PHOTOS_BY_IP = """
+UPDATE posts AS post
+SET photo_data = (
+    SELECT COALESCE(
+        jsonb_agg(jsonb_build_object('promptId', photo.prompt_id, 'url', photo.photo_url)),
+        '[]'::jsonb
+    )
+    FROM jsonb_each_text(saved.state->'photos') AS photo(prompt_id, photo_url)
+    WHERE photo.photo_url LIKE 'data:image/%'
+)
+FROM users AS saved
+WHERE post.author_ip = saved.ip_address
+  AND post.photo_data = '[]'::jsonb
+  AND jsonb_typeof(saved.state->'photos') = 'object'
+  AND EXISTS (
+      SELECT 1 FROM jsonb_each_text(saved.state->'photos') AS photo(prompt_id, photo_url)
+      WHERE photo.photo_url LIKE 'data:image/%'
+  )
+"""
 UNIQUE_POST_PER_USER = "CREATE UNIQUE INDEX IF NOT EXISTS posts_author_ip_unique ON posts(author_ip) WHERE author_ip IS NOT NULL"
 
 
@@ -200,6 +219,8 @@ def list_posts(limit=None, exclude_client_id=None):
             conn.execute("ALTER TABLE posts ADD COLUMN IF NOT EXISTS author_client_id UUID")
             conn.execute(CREATE_DEMO_STATES_TABLE)
             conn.execute(BACKFILL_POST_PHOTOS)
+            conn.execute(CREATE_USERS_TABLE)
+            conn.execute(BACKFILL_POST_PHOTOS_BY_IP)
             query = """SELECT id, created_at, event_id, hook_id, learning_ids,
                               conclusion_id, hashtag_ids, post_text, photo_data FROM posts"""
             params = []
