@@ -1,5 +1,5 @@
 /// <reference types="vite/client" />
-import { AiPreset, ComposerInput, DemoData } from './domain/types';
+import { AiPreset, ComposerInput, DemoData, DemoState } from './domain/types';
 import { MOCK_DEMO } from './demo/mockDemo';
 
 /**
@@ -13,6 +13,8 @@ import { MOCK_DEMO } from './demo/mockDemo';
  */
 
 export class ApiError extends Error {}
+
+const CLIENT_ID_KEY = 'larpedin-client-id';
 
 const apiBase = import.meta.env.DEV ? 'http://127.0.0.1:8000' : '';
 
@@ -74,6 +76,39 @@ export async function savePost(input: ComposerInput): Promise<void> {
   if (!res.ok) {
     const body = (await res.json().catch(() => null)) as { detail?: unknown } | null;
     throw new ApiError(body?.detail ? String(body.detail) : `Save failed: ${res.status}`);
+  }
+}
+
+export function getBrowserClientId(): string {
+  const existing = window.localStorage.getItem(CLIENT_ID_KEY);
+  if (existing && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(existing)) {
+    return existing;
+  }
+  const clientId = crypto.randomUUID();
+  window.localStorage.setItem(CLIENT_ID_KEY, clientId);
+  return clientId;
+}
+
+export async function fetchDemoState(clientId: string): Promise<DemoState | null> {
+  const res = await fetch(`${apiBase}/api/state/${encodeURIComponent(clientId)}`, {
+    headers: { Accept: 'application/json' },
+  });
+  const body = (await res.json().catch(() => null)) as { state?: DemoState | null; detail?: unknown } | null;
+  if (!res.ok) {
+    throw new ApiError(body?.detail ? String(body.detail) : `Load progress failed: ${res.status}`);
+  }
+  return body?.state ?? null;
+}
+
+export async function saveDemoState(clientId: string, state: DemoState): Promise<void> {
+  const res = await fetch(`${apiBase}/api/state/${encodeURIComponent(clientId)}`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ state }),
+  });
+  if (!res.ok) {
+    const body = (await res.json().catch(() => null)) as { detail?: unknown } | null;
+    throw new ApiError(body?.detail ? String(body.detail) : `Save progress failed: ${res.status}`);
   }
 }
 
