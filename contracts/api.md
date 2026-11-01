@@ -87,6 +87,8 @@ I recently attended {event.title}. Here are three things I learned:
 
 Option text is inserted unchanged. Learnings and hashtags keep request order. Identical requests return identical text.
 
+For the personal format, include `"format": "personal"` and optionally `moment`, `person`, `nextStep`, `customHook`, and `customConclusion` strings. Nonempty custom opening and closing text replaces the selected hook or conclusion text; their IDs remain required. The existing IDs remain required for compatibility, including three learning IDs, though learnings are not shown in the personal post. The output contains the hook, event sentence, any provided personal details, the optional next step and conclusion, and hashtags in short paragraphs. Whitespace-only details are omitted. `moment`, `nextStep`, `customHook`, and `customConclusion` are limited to 280 characters, and `person` to 120. Omitting `format` retains the legacy format above. Both compose and save use the same formatter; the saved text contains the personal details.
+
 ### Validation
 
 Return `422` when any of these hold:

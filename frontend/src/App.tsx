@@ -8,7 +8,7 @@ import { PostComposer } from './components/PostComposer';
 import { SocialDemo } from './components/SocialDemo';
 import { Trophies } from './components/Trophies';
 import { demoReducer, initialState } from './domain/reducer';
-import { badgeUnlocked, derivedXp, micUnlocked, photoList } from './domain/selectors';
+import { badgeUnlocked, derivedXp, micUnlocked, photoList, unlockedItemIds } from './domain/selectors';
 import { ComposerInput, DemoData, PromptId } from './domain/types';
 
 type Screen = 'dorm' | 'events' | 'camera' | 'trophies' | 'composer' | 'gift' | 'social';
@@ -123,6 +123,10 @@ export default function App() {
           roomItems={state.roomItems}
           onSelectAvatar={(itemId) => dispatch({ type: 'SET_AVATAR_ITEM', itemId })}
           onToggleRoomItem={(itemId) => dispatch({ type: 'TOGGLE_ROOM_ITEM', itemId })}
+          unlockedItemIds={unlockedItemIds(state)}
+          placements={state.placements}
+          onPlaceItem={(itemId, spotId) => dispatch({ type: 'PLACE_ITEM', itemId, spotId })}
+          onRemoveItem={(spotId) => dispatch({ type: 'REMOVE_ITEM', spotId })}
         />
       )}
 
@@ -157,8 +161,8 @@ export default function App() {
           </div>
         ))}
 
-      {screen === 'composer' && selectedEvent && (
-        <div className="page-with-header">
+      {selectedEvent && (
+        <div className="page-with-header" style={{ display: screen === 'composer' ? undefined : 'none' }}>
           <header className="topbar">
             <button className="icon-btn" onClick={() => setScreen('camera')} aria-label="Back to camera guide">
               ←
@@ -166,8 +170,10 @@ export default function App() {
             <span className="topbar-title">Post composer</span>
           </header>
           <PostComposer
+            key={selectedEvent.id}
             event={selectedEvent}
-            options={demo.composer}
+            demo={demo}
+            photos={photoList(state)}
             onCompose={handleCompose}
             onComposed={handleComposed}
             onAiPreset={fetchAiPreset}
@@ -212,6 +218,7 @@ export default function App() {
             outreachSent={state.outreachSent}
             published={state.postPublished}
             onPublish={handlePublish}
+            onEdit={state.postText && selectedEvent && !state.postPublished ? () => setScreen('composer') : undefined}
           />
         </div>
       )}

@@ -10,6 +10,8 @@
  * gift gate = event selected + post published (photos skippable).
  */
 
+import { ItemId, SpotId } from './items';
+
 export type PromptId = 'room' | 'selfie' | 'banner' | 'handshake';
 
 export const PROMPTS: { id: PromptId; label: string; hint: string }[] = [
@@ -25,6 +27,12 @@ export interface ComposerInput {
   learningIds: [string, string, string];
   conclusionId: string;
   hashtagIds: string[];
+  format?: 'legacy' | 'personal';
+  customHook?: string;
+  customConclusion?: string;
+  moment?: string;
+  person?: string;
+  nextStep?: string;
 }
 
 export interface AiPreset {
@@ -95,6 +103,8 @@ export interface DemoState {
   standUpBullets: { bullet1: string; bullet2: string } | null;
   giftOpened: boolean;
   outreachSent: boolean;
+  /** Which item sits in each dorm spot. An item occupies at most one spot. */
+  placements: Partial<Record<SpotId, ItemId>>;
 }
 
 export type DemoAction =
@@ -111,7 +121,9 @@ export type DemoAction =
   | { type: 'SUBMIT_STAND_UP'; bullet1: string; bullet2: string }
   | { type: 'SET_AVATAR_ITEM'; itemId: string }
   | { type: 'TOGGLE_ROOM_ITEM'; itemId: string }
-  | { type: 'GIFT_ANIMATION_DONE' };
+  | { type: 'GIFT_ANIMATION_DONE' }
+  | { type: 'PLACE_ITEM'; itemId: ItemId; spotId: SpotId }
+  | { type: 'REMOVE_ITEM'; spotId: SpotId };
 
 export const initialState: DemoState = {
   eventId: null,
@@ -126,4 +138,5 @@ export const initialState: DemoState = {
   standUpBullets: null,
   giftOpened: false,
   outreachSent: false,
+  placements: {},
 };
