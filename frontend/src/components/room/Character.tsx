@@ -1,6 +1,6 @@
 import { useFrame } from '@react-three/fiber';
-import { MutableRefObject, useEffect, useMemo, useRef } from 'react';
-import { BackSide, CanvasTexture, Group, SRGBColorSpace } from 'three';
+import { MutableRefObject, useEffect, useLayoutEffect, useMemo, useRef } from 'react';
+import { BackSide, CanvasTexture, CatmullRomCurve3, Color, Group, SRGBColorSpace, Vector3 } from 'three';
 import { AvatarItem, HoodieLook } from '../../assets/manifest';
 import { dampFactor } from './movement';
 
@@ -34,13 +34,38 @@ interface PartProps {
   scale?: [number, number, number];
 }
 
+/** One world-space light direction and two flat tones for every part of the character. */
+function CelMaterial({ color }: { color: string }) {
+  const uniforms = useMemo(() => ({ baseColor: { value: new Color(color) } }), []);
+  useLayoutEffect(() => { uniforms.baseColor.value.set(color); }, [color, uniforms]);
+  return (
+    <shaderMaterial
+      uniforms={uniforms}
+      vertexShader={`varying vec3 viewNormal;
+        void main() {
+          viewNormal = normalize(normalMatrix * normal);
+          gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+        }`}
+      fragmentShader={`uniform vec3 baseColor;
+        varying vec3 viewNormal;
+        void main() {
+          vec3 lightDirection = normalize((viewMatrix * vec4(0.7, 1.0, 1.0, 0.0)).xyz);
+          float lit = step(0.25, dot(normalize(viewNormal), lightDirection));
+          vec3 shade = baseColor * vec3(0.52, 0.68, 0.96);
+          gl_FragColor = vec4(mix(shade, baseColor, lit), 1.0);
+          #include <colorspace_fragment>
+        }`}
+    />
+  );
+}
+
 /** A sphere with an ink outline drawn from its enlarged back faces. */
 function Ball({ radius, color, position, scale }: PartProps) {
   return (
     <group position={position} scale={scale}>
       <mesh>
         <sphereGeometry args={[radius, 24, 18]} />
-        <meshBasicMaterial color={color} toneMapped={false} />
+        <CelMaterial color={color} />
       </mesh>
       <mesh>
         <sphereGeometry args={[radius + OUTLINE, 24, 18]} />
@@ -56,7 +81,7 @@ function Limb({ radius, length, color, position }: PartProps & { length: number 
     <group position={position}>
       <mesh>
         <capsuleGeometry args={[radius, length, 6, 16]} />
-        <meshBasicMaterial color={color} toneMapped={false} />
+        <CelMaterial color={color} />
       </mesh>
       <mesh>
         <capsuleGeometry args={[radius + OUTLINE, length, 6, 16]} />
@@ -67,20 +92,36 @@ function Limb({ radius, length, color, position }: PartProps & { length: number 
 }
 
 function Face() {
+  const cheek = useMemo(() => new CatmullRomCurve3([
+    new Vector3(-0.085, 0.037, 0.315),
+    new Vector3(-0.067, 0.027, 0.315),
+    new Vector3(-0.064, 0.008, 0.315),
+    new Vector3(-0.075, -0.009, 0.315),
+    new Vector3(-0.095, -0.012, 0.315),
+    new Vector3(-0.108, -0.006, 0.315),
+  ]), []);
   return (
     <group position={[0, 0.82, 0]}>
       {[-1, 1].map((side) => (
-        <mesh key={side} position={[side * 0.135, 0.035, 0.265]} scale={[1, 1, 0.5]}>
-          <sphereGeometry args={[0.032, 12, 10]} />
+        <mesh key={side} position={[side * 0.135, 0.035, 0.265]} scale={[1, 1.15, 0.5]}>
+          <sphereGeometry args={[0.026, 12, 10]} />
           <meshBasicMaterial color={INK} toneMapped={false} />
         </mesh>
       ))}
-      <mesh position={[0.01, 0.02, 0.298]} rotation={[0, 0, Math.PI]}>
+      <mesh position={[0.025, 0.02, 0.315]} rotation={[0, 0, Math.PI]} scale={[1.2, 0.3, 1]}>
         <torusGeometry args={[0.07, 0.009, 8, 20, Math.PI]} />
         <meshBasicMaterial color={INK} toneMapped={false} />
       </mesh>
-      <mesh position={[-0.078, 0.012, 0.296]} rotation={[0, 0, Math.PI / 2]}>
-        <torusGeometry args={[0.02, 0.008, 8, 12, Math.PI * 1.2]} />
+      <mesh position={[-0.18, 0.165, 0.19]} rotation={[0, 0, -0.3]}>
+        <torusGeometry args={[0.04, 0.006, 8, 20, Math.PI]} />
+        <meshBasicMaterial color={INK} toneMapped={false} />
+      </mesh>
+      <mesh position={[0.18, 0.165, 0.19]} rotation={[0, 0, 0.3]}>
+        <torusGeometry args={[0.04, 0.006, 8, 20, Math.PI]} />
+        <meshBasicMaterial color={INK} toneMapped={false} />
+      </mesh>
+      <mesh>
+        <tubeGeometry args={[cheek, 32, 0.006, 8, false]} />
         <meshBasicMaterial color={INK} toneMapped={false} />
       </mesh>
     </group>
@@ -109,6 +150,21 @@ function useLabelTexture(hoodie: HoodieLook | undefined): CanvasTexture | null {
   return texture;
 }
 
+function HoodieTorso({ color }: { color: string }) {
+  return (
+    <group position={[0, 0.43, 0]}>
+      <mesh>
+        <cylinderGeometry args={[0.175, 0.175, 0.26, 32]} />
+        <CelMaterial color={color} />
+      </mesh>
+      <mesh>
+        <cylinderGeometry args={[0.175 + OUTLINE, 0.175 + OUTLINE, 0.26 + OUTLINE * 2, 32]} />
+        <meshBasicMaterial color={INK} side={BackSide} toneMapped={false} />
+      </mesh>
+    </group>
+  );
+}
+
 function Hoodie({ hoodie }: { hoodie: HoodieLook }) {
   const label = useLabelTexture(hoodie);
   return (
@@ -129,11 +185,11 @@ function ClipOnMic() {
     <group position={[-0.08, 0.47, 0.17]}>
       <mesh>
         <boxGeometry args={[0.07, 0.07, 0.03]} />
-        <meshBasicMaterial color="#26262b" toneMapped={false} />
+        <CelMaterial color="#26262b" />
       </mesh>
       <mesh position={[0, 0.055, 0]}>
         <sphereGeometry args={[0.04, 12, 10]} />
-        <meshBasicMaterial color="#8d8d94" toneMapped={false} />
+        <CelMaterial color="#8d8d94" />
       </mesh>
     </group>
   );
@@ -175,7 +231,7 @@ export function Character({ avatar, motionRef }: CharacterProps) {
   const sleeve = avatar.hoodie?.color ?? SKIN;
 
   return (
-    <group ref={rootRef} scale={(avatar.scale ?? 1) / 0.95}>
+    <group ref={rootRef}>
       <group ref={bodyRef}>
         <group ref={leftLegRef} position={[-0.09, HIP_Y, 0]}>
           <Limb radius={0.075} length={0.14} color={SKIN} position={[0, -0.12, 0]} />
@@ -186,7 +242,9 @@ export function Character({ avatar, motionRef }: CharacterProps) {
           <Ball radius={0.085} color={SKIN} position={[0, -0.215, 0.04]} scale={[1, 0.8, 1.25]} />
         </group>
 
-        <Limb radius={0.175} length={0.16} color={sleeve} position={[0, 0.42, 0]} />
+        {avatar.hoodie
+          ? <HoodieTorso color={avatar.hoodie.color} />
+          : <Limb radius={0.175} length={0.16} color={SKIN} position={[0, 0.42, 0]} />}
 
         {[
           { side: -1, ref: leftArmRef },
@@ -203,7 +261,16 @@ export function Character({ avatar, motionRef }: CharacterProps) {
         {avatar.hoodie && <Hoodie hoodie={avatar.hoodie} />}
         {avatar.hasMic && <ClipOnMic />}
 
-        <Ball radius={0.3} color={SKIN} position={[0, 0.82, 0]} scale={[1.12, 0.92, 1]} />
+        <group position={[0, 0.82, 0]} scale={[1.15, 0.9, 1]}>
+          <mesh>
+            <sphereGeometry args={[0.3, 48, 32]} />
+            <CelMaterial color={SKIN} />
+          </mesh>
+          <mesh>
+            <sphereGeometry args={[0.3 + OUTLINE, 48, 32]} />
+            <meshBasicMaterial color={INK} side={BackSide} toneMapped={false} />
+          </mesh>
+        </group>
         <Face />
       </group>
     </group>
