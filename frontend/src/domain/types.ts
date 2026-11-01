@@ -27,6 +27,12 @@ export interface ComposerInput {
   learningIds: [string, string, string];
   conclusionId: string;
   hashtagIds: string[];
+  format?: 'legacy' | 'personal';
+  customHook?: string;
+  customConclusion?: string;
+  moment?: string;
+  person?: string;
+  nextStep?: string;
 }
 
 export interface AiPreset {
@@ -41,6 +47,7 @@ export interface DemoEvent {
   id: string;
   title: string;
   dateLabel: string;
+  startAt?: string;
   venueLabel: string;
   url: string;
   featured: boolean;

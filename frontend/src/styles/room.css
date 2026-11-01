@@ -185,3 +185,12 @@
 .room-box-item.locked img {
   filter: grayscale(1) brightness(0.45);
 }
+
+.sheet-backdrop { background: transparent; backdrop-filter: none; pointer-events: none; }
+.sheet { pointer-events: auto; max-height: 45dvh; gap: 12px; padding-top: 12px; }
+.placeable-row { display: flex; gap: 8px; overflow-x: auto; padding: 8px 0; }
+.placeable-tile { flex: 0 0 96px; touch-action: none; user-select: none; }
+.placeable-tile:disabled { opacity: 0.6; }
+.placeable-tile img { height: 48px; }
+.drag-ghost { position: fixed; z-index: 51; width: 70px; height: 70px; object-fit: contain; pointer-events: none; transform: translate(-50%, -50%); }
+@media (prefers-reduced-motion: reduce) { .sheet { animation: none; } }

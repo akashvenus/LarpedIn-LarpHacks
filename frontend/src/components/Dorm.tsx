@@ -41,6 +41,7 @@ export function Dorm({
   onRemoveItem,
 }: DormProps) {
   const [inventoryOpen, setInventoryOpen] = useState(false);
+  const [carryingId, setCarryingId] = useState<ItemId | null>(null);
   const [isStandUpOpen, setIsStandUpOpen] = useState(false);
   const [standUp, setStandUp] = useState('');
   const bullets = standUp.split('\n').map((line) => line.replace(/^\s*[•*-]\s*/, '').trim()).filter(Boolean);
@@ -76,6 +77,8 @@ export function Dorm({
         placements={placements}
         onPlaceItem={onPlaceItem}
         onRemoveItem={onRemoveItem}
+        carryingId={carryingId}
+        onCarryItem={setCarryingId}
       >
         <button
           className="dorm-inventory-btn"
@@ -148,6 +151,13 @@ export function Dorm({
         roomItems={roomItems}
         onSelectAvatar={onSelectAvatar}
         onToggleRoomItem={onToggleRoomItem}
+        unlockedItemIds={unlockedItemIds}
+        placements={placements}
+        onCarryItem={setCarryingId}
+        onDropItem={(itemId, x, y) => {
+          window.dispatchEvent(new CustomEvent('room-item-drop', { detail: { itemId, x, y } }));
+          setInventoryOpen(false);
+        }}
         onClose={() => setInventoryOpen(false)}
       />
     </>

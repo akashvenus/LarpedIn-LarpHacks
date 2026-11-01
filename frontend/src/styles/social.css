@@ -519,3 +519,32 @@
 .social .inbox-avatar { background: #0a66c2; color: #fff; }
 .social .inbox-count { background: #0a66c2; }
 .social .card h3 { color: #454545; }
+
+.personal-preview-text {
+  margin: 14px 0 0;
+  color: #2e2a5c;
+  font-size: 15px;
+  line-height: 1.55;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+.personal-preview .photo-grid { margin-top: 16px; }
+.personal-fields { display: flex; flex-direction: column; gap: 16px; }
+.personal-fields h2, .personal-fields p { margin: 0; }
+.personal-fields p { margin-top: 4px; font-size: 13px; }
+.personal-field { display: flex; flex-direction: column; gap: 6px; font-size: 14px; font-weight: 600; }
+.personal-field small, .personal-tags small { font-size: 12px; color: var(--muted); font-weight: 400; }
+.personal-field input, .personal-field textarea, .personal-field select {
+  width: 100%; min-height: 44px; border: 1px solid var(--line); border-radius: 10px;
+  padding: 11px; background: var(--surface); color: var(--text); font: inherit; font-weight: 400;
+}
+.personal-field textarea { resize: vertical; }
+.personal-field input::placeholder, .personal-field textarea::placeholder { color: #b8b3d5; }
+.personal-field :focus-visible, .personal-tags button:focus-visible { outline: 2px solid var(--teal); outline-offset: 2px; }
+.personal-tags { padding: 0; margin: 0; border: 0; }
+.personal-tags legend { margin-bottom: 8px; font-size: 14px; font-weight: 600; }
+.social .social-edit { margin-top: 12px; color: #0a66c2; border-color: #0a66c2; background: transparent; border-radius: 999px; }
+.personal-worksheet p { margin: 0 0 12px; }
+.personal-worksheet p:last-child { margin-bottom: 0; }
+.personal-worksheet .blank { background: rgba(14, 138, 128, 0.08); min-height: 44px; }
+.personal-worksheet .blank.active { background: rgba(14, 138, 128, 0.18); }

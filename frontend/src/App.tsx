@@ -161,8 +161,8 @@ export default function App() {
           </div>
         ))}
 
-      {screen === 'composer' && selectedEvent && (
-        <div className="page-with-header">
+      {selectedEvent && (
+        <div className="page-with-header" style={{ display: screen === 'composer' ? undefined : 'none' }}>
           <header className="topbar">
             <button className="icon-btn" onClick={() => setScreen('camera')} aria-label="Back to camera guide">
               ←
@@ -170,8 +170,10 @@ export default function App() {
             <span className="topbar-title">Post composer</span>
           </header>
           <PostComposer
+            key={selectedEvent.id}
             event={selectedEvent}
-            options={demo.composer}
+            demo={demo}
+            photos={photoList(state)}
             onCompose={handleCompose}
             onComposed={handleComposed}
             onAiPreset={fetchAiPreset}
@@ -216,6 +218,7 @@ export default function App() {
             outreachSent={state.outreachSent}
             published={state.postPublished}
             onPublish={handlePublish}
+            onEdit={state.postText && selectedEvent && !state.postPublished ? () => setScreen('composer') : undefined}
           />
         </div>
       )}

@@ -1,4 +1,6 @@
+import { useEffect, useState } from 'react';
 import { DemoEvent } from '../domain/types';
+import { eventLocked } from '../domain/eventAvailability';
 
 export interface EventsProps {
   events: DemoEvent[];
@@ -12,18 +14,27 @@ export interface EventsProps {
  * (external link, new tab). Cards flagged demoExample are labeled.
  */
 export function Events({ events, selectedEventId, onSelect }: EventsProps) {
+  const [now, setNow] = useState(Date.now());
+
+  useEffect(() => {
+    const timer = window.setInterval(() => setNow(Date.now()), 1000);
+    return () => window.clearInterval(timer);
+  }, []);
+
   return (
     <>
       <header>
         <h1>Suggested events</h1>
         <p className="muted" style={{ margin: 0 }}>
-          Curated for the demo. Pick one to open its photo guide.
+          Pick an event to open its photo guide. Upcoming events unlock when they start.
         </p>
       </header>
 
       <div className="events-list">
-        {events.map((event) => (
-          <article
+        {events.map((event) => {
+          const locked = eventLocked(event, now);
+          return (
+            <article
             key={event.id}
             className={`card event-card${event.featured ? ' featured' : ''}${
               selectedEventId === event.id ? ' selected' : ''
@@ -41,10 +52,10 @@ export function Events({ events, selectedEventId, onSelect }: EventsProps) {
             <div className="event-actions">
               <button
                 className="btn btn-primary"
-                disabled={selectedEventId === event.id}
+                disabled={locked || selectedEventId === event.id}
                 onClick={() => onSelect(event.id)}
               >
-                {selectedEventId === event.id ? 'Selected' : 'Select event'}
+                {locked ? `🔒 Opens ${event.dateLabel}` : selectedEventId === event.id ? 'Selected' : 'Select event'}
               </button>
               <a
                 className="btn"
@@ -55,8 +66,9 @@ export function Events({ events, selectedEventId, onSelect }: EventsProps) {
                 Open on Luma ↗
               </a>
             </div>
-          </article>
-        ))}
+            </article>
+          );
+        })}
       </div>
     </>
   );

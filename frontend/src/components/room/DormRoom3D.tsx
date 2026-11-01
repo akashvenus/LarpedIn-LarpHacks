@@ -1,8 +1,10 @@
 import { useTexture } from '@react-three/drei';
-import { Canvas } from '@react-three/fiber';
-import { CSSProperties, MouseEvent, useState } from 'react';
+import { Canvas, useThree } from '@react-three/fiber';
+import { CSSProperties, MouseEvent, useEffect, useState } from 'react';
+import { Raycaster, Vector2 } from 'three';
 import { ASSETS, AvatarItem } from '../../assets/manifest';
 import { findItem, ItemId, SpotId } from '../../domain/items';
+import { findDropTarget } from './dropTarget';
 import { ItemBoxPanel } from './ItemBoxPanel';
 import { Joystick } from './Joystick';
 import { PlacedItems } from './PlacedItems';
@@ -20,6 +22,8 @@ export interface DormRoom3DProps {
   placements: Partial<Record<SpotId, ItemId>>;
   onPlaceItem: (itemId: ItemId, spotId: SpotId) => void;
   onRemoveItem: (spotId: SpotId) => void;
+  carryingId: ItemId | null;
+  onCarryItem: (itemId: ItemId | null) => void;
 }
 
 /** Walkable dorm: the 3D scene plus its on-screen controls. */
@@ -30,10 +34,11 @@ export default function DormRoom3D({
   placements,
   onPlaceItem,
   onRemoveItem,
+  carryingId,
+  onCarryItem,
 }: DormRoom3DProps) {
   const [isNearBox, setIsNearBox] = useState(false);
   const [isBoxOpen, setIsBoxOpen] = useState(false);
-  const [carryingId, setCarryingId] = useState<ItemId | null>(null);
   const { yawRef, onPointerDown } = useDragYaw(0);
 
   const carried = carryingId ? findItem(carryingId) : undefined;
@@ -48,7 +53,7 @@ export default function DormRoom3D({
       }
       if (code === 'Escape') {
         setIsBoxOpen(false);
-        setCarryingId(null);
+        onCarryItem(null);
       }
     },
     onRelease: (code) => {
@@ -65,19 +70,19 @@ export default function DormRoom3D({
     const item = findItem(itemId);
     // Decoded ahead of the tap, so the item appears the moment it is placed.
     if (item) useTexture.preload(ASSETS[item.asset]);
-    setCarryingId(itemId);
+    onCarryItem(itemId);
     setIsBoxOpen(false);
   };
 
   const handlePlace = (spotId: SpotId) => {
     if (carryingId) onPlaceItem(carryingId, spotId);
-    setCarryingId(null);
+    onCarryItem(null);
   };
 
   const handlePickUp = (spotId: SpotId, itemId: ItemId) => {
     if (carryingId) return;
     onRemoveItem(spotId);
-    setCarryingId(itemId);
+    onCarryItem(itemId);
   };
 
   return (
@@ -92,6 +97,7 @@ export default function DormRoom3D({
           <ambientLight intensity={lightsPlaced ? 1.1 : 1.6} />
           <directionalLight position={[-1, 2.4, 1]} intensity={1.4} />
           <RoomShell />
+          <DropHandler onPlaceItem={onPlaceItem} onCarryItem={onCarryItem} />
           {lightsPlaced && <RgbLights />}
           <PlacedItems
             placements={placements}
@@ -115,7 +121,7 @@ export default function DormRoom3D({
             Walk to a glowing spot on the {carried.surface === 'wall' ? 'wall' : 'desk'} and tap it to place your{' '}
             {carried.name.toLowerCase()}
           </span>
-          <button className="room-banner-cancel" onClick={() => setCarryingId(null)}>
+          <button className="room-banner-cancel" onClick={() => onCarryItem(null)}>
             Cancel
           </button>
         </div>
@@ -151,4 +157,26 @@ export default function DormRoom3D({
       )}
     </div>
   );
+}
+
+function DropHandler({ onPlaceItem, onCarryItem }: Pick<DormRoom3DProps, 'onPlaceItem' | 'onCarryItem'>) {
+  const { camera, gl } = useThree();
+  useEffect(() => {
+    const handleDrop = (raw: Event) => {
+      const { itemId, x, y } = (raw as CustomEvent<{ itemId: ItemId; x: number; y: number }>).detail;
+      const item = findItem(itemId);
+      const rect = gl.domElement.getBoundingClientRect();
+      if (!item || x < rect.left || x > rect.right || y < rect.top || y > rect.bottom) return;
+      const raycaster = new Raycaster();
+      raycaster.setFromCamera(new Vector2((x - rect.left) / rect.width * 2 - 1, -(y - rect.top) / rect.height * 2 + 1), camera);
+      const spotId = findDropTarget(item, raycaster);
+      if (spotId) {
+        onPlaceItem(itemId, spotId);
+        onCarryItem(null);
+      }
+    };
+    window.addEventListener('room-item-drop', handleDrop);
+    return () => window.removeEventListener('room-item-drop', handleDrop);
+  }, [camera, gl, onPlaceItem, onCarryItem]);
+  return null;
 }
