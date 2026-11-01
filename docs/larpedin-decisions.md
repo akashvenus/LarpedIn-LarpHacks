@@ -1,6 +1,6 @@
 # LarpedIn — decision log
 
-Status: proposed shared understanding, awaiting confirmation. The detailed implementation is in [the build specification](./larpedin-build-spec.md) and [agent briefs](./larpedin-agent-briefs.md).
+Status: locked and confirmed. The detailed implementation is in [the build specification](./larpedin-build-spec.md) and [agent briefs](./larpedin-agent-briefs.md).
 
 ## ADR 001 — Demo loop
 
@@ -103,4 +103,3 @@ Status: proposed shared understanding, awaiting confirmation. The detailed imple
 - Exact demo deadline and integration cutoff within the roughly 7–8 hour window.
 - Exact MadLibs copy, event fixtures, and recruiter copy.
 - Shared data model, API contract, and path ownership.
-- Confirm this proposed shared understanding before starting implementation.

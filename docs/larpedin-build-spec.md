@@ -1,6 +1,6 @@
 # LarpedIn — one-day build specification
 
-**Status:** Proposed implementation contract for team confirmation. **Target:** a complete mobile-web judge demo before the LarpHacks 6 p.m. project deadline on November 1, 2026. The [event page](https://luma.com/irn5abpa) and [Devpost](https://larphacks.devpost.com/) are the deadline sources. Begin from this contract rather than broad feature prompts.
+**Status:** Locked implementation contract. **Target:** a complete mobile-web judge demo before the LarpHacks 6 p.m. project deadline on November 1, 2026. The [event page](https://luma.com/irn5abpa) and [Devpost](https://larphacks.devpost.com/) are the deadline sources. Begin from this contract rather than broad feature prompts.
 
 ## 1. Product promise and demo path
 
