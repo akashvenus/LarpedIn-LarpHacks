@@ -11,22 +11,24 @@
       "demoExample": false
     },
     {
-      "id": "physical-ai-meetup",
-      "title": "Toronto Physical AI Workshop and Meetup",
-      "dateLabel": "November 2026",
+      "id": "idea-market-nov-5",
+      "title": "Idea Market @ UofT Hatchery",
+      "dateLabel": "Nov 5, 5:30 PM EST",
+      "startAt": "2026-11-05T17:30:00-05:00",
       "venueLabel": "University of Toronto",
-      "url": "https://luma.com/toronto-physical-ai-workshop-and-meetup-nov-2026",
+      "url": "https://luma.com/frr7hrc2",
       "featured": false,
       "demoExample": false
     },
     {
-      "id": "founder-coffee-chat",
-      "title": "Pre-Seed Founder Coffee Chat",
-      "dateLabel": "Dates vary",
+      "id": "mlops-world-north-social",
+      "title": "MLOps World North Social",
+      "dateLabel": "Nov 5, 5:30 PM EST",
+      "startAt": "2026-11-05T17:30:00-05:00",
       "venueLabel": "Toronto",
-      "url": "https://luma.com/discover",
+      "url": "https://luma.com/mlops-world-north",
       "featured": false,
-      "demoExample": true
+      "demoExample": false
     }
   ],
   "composer": {

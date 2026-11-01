@@ -21,6 +21,7 @@ type DemoEvent = {
   id: string;
   title: string;
   dateLabel: string;
+  startAt?: string; // ISO 8601 start time with timezone; upcoming events unlock at this time
   venueLabel: string;
   url: string;
   featured: boolean;

@@ -39,6 +39,7 @@ export interface DemoEvent {
   id: string;
   title: string;
   dateLabel: string;
+  startAt?: string;
   venueLabel: string;
   url: string;
   featured: boolean;
