@@ -31,6 +31,15 @@ CREATE TABLE IF NOT EXISTS users (
 )
 """
 
+CREATE_DEMO_STATES_TABLE = """
+CREATE TABLE IF NOT EXISTS demo_states (
+    client_id UUID PRIMARY KEY,
+    state JSONB NOT NULL,
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+)
+"""
+
+
 ADD_POST_AUTHOR_IP = "ALTER TABLE posts ADD COLUMN IF NOT EXISTS author_ip INET"
 UNIQUE_POST_PER_USER = "CREATE UNIQUE INDEX IF NOT EXISTS posts_author_ip_unique ON posts(author_ip) WHERE author_ip IS NOT NULL"
 
@@ -83,21 +92,24 @@ def save_post(author_ip, event_id, hook_id, learning_ids, conclusion_id, hashtag
     return _post(row)
 
 
-def list_posts(limit=None):
+def list_posts(limit=None, exclude_client_id=None):
     try:
         with _connect() as conn:
             conn.execute(CREATE_TABLE)
             conn.execute(ADD_POST_AUTHOR_IP)
             conn.execute(UNIQUE_POST_PER_USER)
-            query = """
-                SELECT id, created_at, event_id, hook_id, learning_ids,
-                       conclusion_id, hashtag_ids, post_text
-                FROM posts
-                ORDER BY created_at DESC, id DESC
-                """
-            rows = conn.execute(query).fetchall() if limit is None else conn.execute(
-                query + " LIMIT %s", (limit,)
-            ).fetchall()
+            conn.execute("ALTER TABLE posts ADD COLUMN IF NOT EXISTS author_client_id UUID")
+            query = """SELECT id, created_at, event_id, hook_id, learning_ids,
+                              conclusion_id, hashtag_ids, post_text FROM posts"""
+            params = []
+            if exclude_client_id is not None:
+                query += " WHERE author_client_id IS DISTINCT FROM %s"
+                params.append(exclude_client_id)
+            query += " ORDER BY created_at DESC, id DESC"
+            if limit is not None:
+                query += " LIMIT %s"
+                params.append(limit)
+            rows = conn.execute(query, params).fetchall()
     except psycopg.Error as error:
         raise DatabaseUnavailable("Could not load posts") from error
     return [_post(row) for row in rows]
@@ -156,6 +168,100 @@ def delete_user_post(author_ip):
                     "composerDraft": {"answers": {}, "hashtagIds": [], "active": "hook", "customOpen": False, "customDraft": ""},
                     "selections": {"hookId": None, "learningIds": [], "conclusionId": None, "hashtagIds": []},
                 }), author_ip),
+            )
+    except psycopg.Error as error:
+        raise DatabaseUnavailable("Could not delete post") from error
+
+def load_demo_state(client_id):
+    try:
+        with _connect() as conn:
+            conn.execute(CREATE_DEMO_STATES_TABLE)
+            row = conn.execute(
+                "SELECT state FROM demo_states WHERE client_id = %s",
+                (client_id,),
+            ).fetchone()
+    except psycopg.Error as error:
+        raise DatabaseUnavailable("Could not load saved progress") from error
+    return row["state"] if row else None
+
+
+def save_demo_state(client_id, state):
+    try:
+        with _connect() as conn:
+            conn.execute(CREATE_DEMO_STATES_TABLE)
+            conn.execute(
+                """
+                INSERT INTO demo_states (client_id, state)
+                VALUES (%s, %s)
+                ON CONFLICT (client_id) DO UPDATE
+                SET state = EXCLUDED.state, updated_at = now()
+                """,
+                (client_id, Jsonb(state)),
+            )
+    except psycopg.Error as error:
+        raise DatabaseUnavailable("Could not save progress") from error
+
+
+CREATE_USER_POSTS = """
+CREATE TABLE IF NOT EXISTS user_posts (
+    client_id UUID PRIMARY KEY,
+    event_id TEXT NOT NULL,
+    post_text TEXT NOT NULL,
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+)
+"""
+
+
+def save_user_post(client_id, event_id, text, composer_input):
+    try:
+        with _connect() as conn:
+            conn.execute(CREATE_USER_POSTS)
+            conn.execute(CREATE_TABLE)
+            conn.execute("ALTER TABLE posts ADD COLUMN IF NOT EXISTS author_client_id UUID")
+            conn.execute("CREATE UNIQUE INDEX IF NOT EXISTS posts_author_client_id_unique ON posts(author_client_id) WHERE author_client_id IS NOT NULL")
+            conn.execute(
+                """INSERT INTO posts (author_client_id, event_id, hook_id, learning_ids, conclusion_id, hashtag_ids, post_text)
+                   VALUES (%s, %s, %s, %s, %s, %s, %s)
+                   ON CONFLICT (author_client_id) WHERE author_client_id IS NOT NULL DO UPDATE SET
+                     created_at = now(), event_id = EXCLUDED.event_id, hook_id = EXCLUDED.hook_id,
+                     learning_ids = EXCLUDED.learning_ids, conclusion_id = EXCLUDED.conclusion_id,
+                     hashtag_ids = EXCLUDED.hashtag_ids, post_text = EXCLUDED.post_text""",
+                (client_id, event_id, composer_input['hookId'], composer_input['learningIds'],
+                 composer_input['conclusionId'], composer_input['hashtagIds'], text),
+            )
+            conn.execute(
+                """INSERT INTO user_posts (client_id, event_id, post_text)
+                   VALUES (%s, %s, %s)
+                   ON CONFLICT (client_id) DO UPDATE SET
+                     event_id = EXCLUDED.event_id, post_text = EXCLUDED.post_text,
+                     updated_at = now()""",
+                (client_id, event_id, text),
+            )
+            conn.execute(CREATE_DEMO_STATES_TABLE)
+            conn.execute(
+                """UPDATE demo_states SET state = state || %s, updated_at = now()
+                   WHERE client_id = %s""",
+                (Jsonb({"postText": text, "postPublished": True, "composerInput": composer_input}), client_id),
+            )
+    except psycopg.Error as error:
+        raise DatabaseUnavailable("Could not save post") from error
+
+
+def delete_browser_post(client_id):
+    try:
+        with _connect() as conn:
+            conn.execute(CREATE_USER_POSTS)
+            conn.execute(CREATE_DEMO_STATES_TABLE)
+            conn.execute(CREATE_TABLE)
+            conn.execute("ALTER TABLE posts ADD COLUMN IF NOT EXISTS author_client_id UUID")
+            conn.execute("DELETE FROM posts WHERE author_client_id = %s", (client_id,))
+            conn.execute("DELETE FROM user_posts WHERE client_id = %s", (client_id,))
+            conn.execute(
+                """UPDATE demo_states SET state = state || %s, updated_at = now()
+                   WHERE client_id = %s""",
+                (Jsonb({"postText": "", "postPublished": False, "composerInput": None,
+                       "composerDraft": {"answers": {}, "hashtagIds": [], "active": "hook", "customOpen": False, "customDraft": ""},
+                       "selections": {"hookId": None, "learningIds": [], "conclusionId": None, "hashtagIds": []}}), client_id),
             )
     except psycopg.Error as error:
         raise DatabaseUnavailable("Could not delete post") from error

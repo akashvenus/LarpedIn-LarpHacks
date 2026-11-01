@@ -14,6 +14,8 @@ import { MOCK_DEMO } from './demo/mockDemo';
 
 export class ApiError extends Error {}
 
+const CLIENT_ID_KEY = 'larpedin-client-id';
+
 const apiBase = import.meta.env.DEV ? 'http://127.0.0.1:8000' : '';
 
 async function parseJson(res: Response): Promise<unknown> {
@@ -78,8 +80,26 @@ export async function savePost(input: ComposerInput): Promise<CommunityPost> {
   return (await res.json()) as CommunityPost;
 }
 
-export async function fetchCommunityPosts(): Promise<CommunityPost[]> {
-  const res = await fetch(`${apiBase}/api/posts`, { headers: { Accept: 'application/json' } });
+export function getBrowserClientId(): string {
+  const existing = window.localStorage.getItem(CLIENT_ID_KEY);
+  if (existing && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(existing)) return existing;
+  const clientId = crypto.randomUUID();
+  window.localStorage.setItem(CLIENT_ID_KEY, clientId);
+  return clientId;
+}
+
+export async function saveBrowserPost(clientId: string, input: ComposerInput): Promise<string> {
+  const res = await fetch(`${apiBase}/api/user-post/${encodeURIComponent(clientId)}`, {
+    method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(input),
+  });
+  const body = (await res.json().catch(() => null)) as { text?: string; detail?: string } | null;
+  if (!res.ok || !body?.text) throw new ApiError(body?.detail || `Save post failed: ${res.status}`);
+  return body.text;
+}
+
+export async function fetchCommunityPosts(clientId?: string): Promise<CommunityPost[]> {
+  const query = clientId ? `?exclude_client_id=${encodeURIComponent(clientId)}` : '';
+  const res = await fetch(`${apiBase}/api/posts${query}`, { headers: { Accept: 'application/json' } });
   const body = (await res.json().catch(() => null)) as { posts?: CommunityPost[]; detail?: unknown } | null;
   if (!res.ok) {
     throw new ApiError(body?.detail ? String(body.detail) : `Load feed failed: ${res.status}`);
@@ -87,16 +107,16 @@ export async function fetchCommunityPosts(): Promise<CommunityPost[]> {
   return body?.posts ?? [];
 }
 
-export async function deleteUserPost(): Promise<void> {
-  const res = await fetch(`${apiBase}/api/posts/me`, { method: 'DELETE' });
+export async function deleteUserPost(clientId: string): Promise<void> {
+  const res = await fetch(`${apiBase}/api/user-post/${encodeURIComponent(clientId)}`, { method: 'DELETE' });
   if (!res.ok) {
     const body = (await res.json().catch(() => null)) as { detail?: string } | null;
     throw new ApiError(body?.detail || `Delete post failed: ${res.status}`);
   }
 }
 
-export async function fetchDemoState(): Promise<DemoState | null> {
-  const res = await fetch(`${apiBase}/api/state`, {
+export async function fetchDemoState(clientId: string): Promise<DemoState | null> {
+  const res = await fetch(`${apiBase}/api/state/${encodeURIComponent(clientId)}`, {
     headers: { Accept: 'application/json' },
   });
   const body = (await res.json().catch(() => null)) as { state?: DemoState | null; detail?: unknown } | null;
@@ -106,8 +126,8 @@ export async function fetchDemoState(): Promise<DemoState | null> {
   return body?.state ?? null;
 }
 
-export async function saveDemoState(state: DemoState): Promise<void> {
-  const res = await fetch(`${apiBase}/api/state`, {
+export async function saveDemoState(clientId: string, state: DemoState): Promise<void> {
+  const res = await fetch(`${apiBase}/api/state/${encodeURIComponent(clientId)}`, {
     method: 'PUT',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ state }),

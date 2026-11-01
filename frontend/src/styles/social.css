@@ -157,6 +157,12 @@
   gap: 10px;
 }
 
+.community-post + .community-post {
+  margin-top: 20px;
+  padding-top: 20px;
+  border-top: 1px solid var(--line);
+}
+
 .feed-head {
   display: flex;
   align-items: center;
@@ -181,6 +187,7 @@
   font-size: 14px;
   line-height: 1.5;
   white-space: pre-wrap;
+  overflow-wrap: anywhere;
 }
 
 .feed-photo {

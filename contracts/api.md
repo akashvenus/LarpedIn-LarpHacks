@@ -183,3 +183,7 @@ FastAPI serves `frontend/dist` at `/` with an HTML fallback for SPA navigation. 
 ## `DELETE /api/posts/me`
 
 Deletes the current IP's post from the shared feed. Returns `204`, or `503` when the database is unavailable. Posts are unique per IP; publishing again replaces that IP's existing feed post.
+
+### Browser-scoped progress and posts
+
+The app uses `GET` and `PUT /api/state/{client_id}` for browser-scoped progress and `PUT` and `DELETE /api/user-post/{client_id}` for that browser's single post. Browser IDs are UUIDs retained in local storage and act as demo identifiers, not account authentication. New browser-scoped posts also appear in the shared `GET /api/posts` feed; the optional `exclude_client_id` query parameter omits the current browser's own post. The IP-based endpoints remain available for compatibility. Existing browser-ID and IP-based records stay separate; this change does not infer ownership or migrate records between identities.

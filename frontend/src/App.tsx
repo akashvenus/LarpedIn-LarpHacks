@@ -5,9 +5,10 @@ import {
   fetchCommunityPosts,
   fetchDemo,
   fetchDemoState,
+  getBrowserClientId,
   localCompose,
   saveDemoState,
-  savePost,
+  saveBrowserPost,
   deleteUserPost,
 } from './api';
 import { CameraGuide } from './components/CameraGuide';
@@ -49,6 +50,7 @@ export default function App() {
   const [communityPosts, setCommunityPosts] = useState<CommunityPost[]>([]);
   const [saving, setSaving] = useState(false);
   const [loadAttempt, setLoadAttempt] = useState(0);
+  const clientId = useRef<string | null>(null);
   const saveQueue = useRef<Promise<void>>(Promise.resolve());
   const lastComposerInput = useRef<ComposerInput | null>(null);
   const postOperation = useRef(false);
@@ -106,7 +108,13 @@ export default function App() {
       setStateLoaded(true);
       return () => { alive = false; };
     }
-    fetchDemoState()
+    try {
+      clientId.current = getBrowserClientId();
+    } catch (err) {
+      setStateError(err instanceof Error ? err.message : 'Could not identify this browser');
+      return () => { alive = false; };
+    }
+    fetchDemoState(clientId.current)
       .then((saved) => {
         if (!alive) return;
         if (saved) {
@@ -132,12 +140,13 @@ export default function App() {
       }
       return;
     }
+    if (!clientId.current) return;
     const snapshot = state;
     setSaving(true);
     const timer = window.setTimeout(() => {
       if (postOperation.current) return;
       saveQueue.current = saveQueue.current
-        .then(() => saveDemoState(snapshot))
+        .then(() => saveDemoState(clientId.current!, snapshot))
         .then(() => {
           setSaveError(null);
           setSaving(false);
@@ -158,7 +167,7 @@ export default function App() {
   useEffect(() => {
     if (isLocalDemo || screen !== 'social') return;
     let alive = true;
-    fetchCommunityPosts()
+    fetchCommunityPosts(clientId.current ?? undefined)
       .then((posts) => {
         if (!alive) return;
         setCommunityPosts(posts);
@@ -247,7 +256,7 @@ export default function App() {
   };
 
   const handlePublish = async (text: string) => {
-    if (postOperation.current || !text.trim()) return;
+    if (postOperation.current || (!isLocalDemo && !clientId.current) || !text.trim()) return;
     const input = replacement?.input ?? lastComposerInput.current ?? state.composerInput;
     if (!input) { setPostError('Open the composer to prepare your post.'); return; }
     postOperation.current = true;
@@ -255,10 +264,10 @@ export default function App() {
     setPostError(null);
     try {
       await saveQueue.current;
-      const savedText = isLocalDemo ? localCompose(input, demo) : (await savePost(input)).text;
+      const savedText = isLocalDemo ? localCompose(input, demo) : await saveBrowserPost(clientId.current!, input);
       if (savedText !== text) throw new Error('The saved post did not match the draft.');
       if (!isLocalDemo) {
-        fetchCommunityPosts()
+        fetchCommunityPosts(clientId.current ?? undefined)
           .then(setCommunityPosts)
           .catch((err: unknown) => setFeedError(err instanceof Error ? err.message : 'Could not load community feed'));
       }
@@ -278,15 +287,15 @@ export default function App() {
   };
 
   const handleDelete = async () => {
-    if (postOperation.current) return;
+    if (postOperation.current || (!isLocalDemo && !clientId.current)) return;
     postOperation.current = true;
     setPostBusy(true);
     setPostError(null);
     try {
       await saveQueue.current;
       if (!isLocalDemo) {
-        await deleteUserPost();
-        fetchCommunityPosts()
+        await deleteUserPost(clientId.current!);
+        fetchCommunityPosts(clientId.current ?? undefined)
           .then(setCommunityPosts)
           .catch((err: unknown) => setFeedError(err instanceof Error ? err.message : 'Could not load community feed'));
       }

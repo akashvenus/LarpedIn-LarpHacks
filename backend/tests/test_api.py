@@ -435,3 +435,40 @@ def test_saved_progress_profile_fields_are_backward_compatible():
     assert updated.name == "Sam" and updated.profilePhoto == "selfie" and updated.outreachPostText == "My post"
     assert updated.accessory == "glasses" and updated.heldProp == "coffee"
     assert DemoStatePayload.model_validate({**payload, "accessory": "propeller-cap"}).accessory == "propeller-cap"
+
+
+def test_browser_posts_are_isolated_and_remain_compatible_with_ip_routes(monkeypatch):
+    from app import main
+    posts = {}
+    states = {}
+    def save_post(client_id, event_id, text, composer_input):
+        posts[str(client_id)] = text
+    def delete_post(client_id):
+        posts.pop(str(client_id), None)
+    monkeypatch.setattr(main, 'save_user_post', save_post)
+    monkeypatch.setattr(main, 'delete_browser_post', delete_post)
+    monkeypatch.setattr(main, 'load_demo_state', lambda client_id: states.get(str(client_id)))
+    first = '11111111-1111-4111-8111-111111111111'
+    second = '22222222-2222-4222-8222-222222222222'
+    payload = {**good_payload(), 'format': 'personal', 'moment': 'first version'}
+    assert client.put(f'/api/user-post/{first}', json=payload).status_code == 200
+    assert client.put(f'/api/user-post/{second}', json=payload).status_code == 200
+    assert client.put(f'/api/user-post/{first}', json={**payload, 'moment': 'replacement'}).status_code == 200
+    assert 'replacement' in posts[first] and 'first version' in posts[second]
+    assert client.delete(f'/api/user-post/{first}').status_code == 204
+    assert first not in posts and second in posts
+    assert client.get(f'/api/state/{first}').json() == {'state': None}
+    assert client.delete('/api/user-post/not-a-uuid').status_code == 422
+
+
+def test_shared_feed_can_exclude_the_current_browser(monkeypatch):
+    from app import main
+    captured = {}
+    def get_posts(limit, exclude_client_id):
+        captured['id'] = str(exclude_client_id)
+        return []
+    monkeypatch.setattr(main, 'list_posts', get_posts)
+    browser_id = '11111111-1111-4111-8111-111111111111'
+    response = client.get('/api/posts', params={'exclude_client_id': browser_id})
+    assert response.status_code == 200 and response.json() == {'posts': []}
+    assert captured['id'] == browser_id
