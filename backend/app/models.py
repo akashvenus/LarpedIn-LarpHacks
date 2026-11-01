@@ -32,6 +32,15 @@ class ComposeRequest(BaseModel):
     nextStep: str = Field(default="", max_length=280)
 
 
+class PostPhoto(BaseModel):
+    promptId: Literal["room", "selfie", "banner", "handshake"]
+    url: str = Field(max_length=2_500_000, pattern=r"^data:image/")
+
+
+class BrowserPostRequest(ComposeRequest):
+    photos: list[PostPhoto] = Field(default_factory=list, max_length=4)
+
+
 class ComposeResponse(BaseModel):
     text: str
 
@@ -57,6 +66,7 @@ class PostResponse(BaseModel):
     conclusionId: str
     hashtagIds: list[str]
     text: str
+    photos: list[PostPhoto] = Field(default_factory=list)
 
 
 class PostListResponse(BaseModel):

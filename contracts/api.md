@@ -2,7 +2,7 @@
 
 Contract version: 2. Changes are announced by Andrew to all workflows. Source: [build spec](../docs/larpedin-build-spec.md), sections 3 and 4, plus the post-lock Postgres and Gemini extension.
 
-All routes are under `/api` on the same origin as the frontend. No authentication or photo uploads. `/api/compose` stays deterministic. Published posts may be stored in Postgres, and the AI preset route may call Gemini when `GEMINI_API_KEY` is configured; both features degrade gracefully. JSON field names are camelCase.
+All routes are under `/api` on the same origin as the frontend. No authentication. Captured post photos are stored as data URLs in Postgres with the published post. `/api/compose` stays deterministic. The AI preset route may call Gemini when `GEMINI_API_KEY` is configured; it falls back to curated choices when unavailable. JSON field names are camelCase.
 
 ## `GET /api/health`
 
@@ -150,7 +150,7 @@ Returns the shared community feed across all users. Optional query: `limit` (ran
 Response `200`:
 
 ```json
-{"posts": [{"id": 1, "createdAt": "2026-11-01T18:30:00+00:00", "eventId": "larphacks", "hookId": "hook-1", "learningIds": ["learn-1", "learn-2", "learn-3"], "conclusionId": "end-1", "hashtagIds": ["ai"], "text": "..."}]}
+{"posts": [{"id": 1, "createdAt": "2026-11-01T18:30:00+00:00", "eventId": "larphacks", "hookId": "hook-1", "learningIds": ["learn-1", "learn-2", "learn-3"], "conclusionId": "end-1", "hashtagIds": ["ai"], "text": "...", "photos": [{"promptId": "selfie", "url": "data:image/jpeg;base64,..."}]}]}
 ```
 
 Newest posts first. Returns `422` for an out-of-range limit and `503` when the database is unavailable. The author's IP is stored internally but is never included in the response.
@@ -186,7 +186,7 @@ Deletes the current IP's post from the shared feed. Returns `204`, or `503` when
 
 ### Browser-scoped progress and posts
 
-The app uses `GET` and `PUT /api/state/{client_id}` for browser-scoped progress and `PUT` and `DELETE /api/user-post/{client_id}` for that browser's single post. Browser IDs are UUIDs retained in local storage and act as demo identifiers, not account authentication. New browser-scoped posts also appear in the shared `GET /api/posts` feed; the optional `exclude_client_id` query parameter omits the current browser's own post. The IP-based endpoints remain available for compatibility. Existing browser-ID and IP-based records stay separate; this change does not infer ownership or migrate records between identities.
+The app uses `GET` and `PUT /api/state/{client_id}` for browser-scoped progress and `PUT` and `DELETE /api/user-post/{client_id}` for that browser's single post. The post `PUT` accepts an optional `photos` array of up to four `{promptId, url}` data URLs and stores them with the post. Browser IDs are UUIDs retained in local storage and act as demo identifiers, not account authentication. New browser-scoped posts, including their photos, also appear in the shared `GET /api/posts` feed; the optional `exclude_client_id` query parameter omits the current browser's own post. The IP-based endpoints remain available for compatibility. Existing browser-ID and IP-based records stay separate; this change does not infer ownership or migrate records between identities.
 
 ### Daily Stand-Ups
 

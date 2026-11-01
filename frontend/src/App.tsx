@@ -318,7 +318,7 @@ export default function App() {
     setPostError(null);
     try {
       await saveQueue.current;
-      const savedText = isLocalDemo ? localCompose(input, demo) : await saveBrowserPost(clientId.current!, input);
+      const savedText = isLocalDemo ? localCompose(input, demo) : await saveBrowserPost(clientId.current!, input, photoList(state));
       if (savedText !== text) throw new Error('The saved post did not match the draft.');
       if (!isLocalDemo) {
         fetchCommunityPosts(clientId.current ?? undefined)

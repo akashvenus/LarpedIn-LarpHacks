@@ -94,7 +94,8 @@ CREATE TABLE IF NOT EXISTS posts (
     learning_ids TEXT[] NOT NULL,
     conclusion_id TEXT NOT NULL,
     hashtag_ids TEXT[] NOT NULL,
-    post_text TEXT NOT NULL
+    post_text TEXT NOT NULL,
+    photo_data JSONB NOT NULL DEFAULT '[]'::jsonb
 )
 """
 
@@ -116,6 +117,26 @@ CREATE TABLE IF NOT EXISTS demo_states (
 
 
 ADD_POST_AUTHOR_IP = "ALTER TABLE posts ADD COLUMN IF NOT EXISTS author_ip INET"
+ADD_POST_PHOTOS = "ALTER TABLE posts ADD COLUMN IF NOT EXISTS photo_data JSONB NOT NULL DEFAULT '[]'::jsonb"
+BACKFILL_POST_PHOTOS = """
+UPDATE posts AS post
+SET photo_data = (
+    SELECT COALESCE(
+        jsonb_agg(jsonb_build_object('promptId', photo.prompt_id, 'url', photo.photo_url)),
+        '[]'::jsonb
+    )
+    FROM jsonb_each_text(saved.state->'photos') AS photo(prompt_id, photo_url)
+    WHERE photo.photo_url <> 'null'
+)
+FROM demo_states AS saved
+WHERE post.author_client_id = saved.client_id
+  AND post.photo_data = '[]'::jsonb
+  AND jsonb_typeof(saved.state->'photos') = 'object'
+  AND EXISTS (
+      SELECT 1 FROM jsonb_each_text(saved.state->'photos') AS photo(prompt_id, photo_url)
+      WHERE photo.photo_url LIKE 'data:image/%'
+  )
+"""
 UNIQUE_POST_PER_USER = "CREATE UNIQUE INDEX IF NOT EXISTS posts_author_ip_unique ON posts(author_ip) WHERE author_ip IS NOT NULL"
 
 
@@ -139,6 +160,7 @@ def _post(row):
         "conclusionId": row["conclusion_id"],
         "hashtagIds": row["hashtag_ids"],
         "text": row["post_text"],
+        "photos": row["photo_data"] or [],
     }
 
 
@@ -147,6 +169,7 @@ def save_post(author_ip, event_id, hook_id, learning_ids, conclusion_id, hashtag
         with _connect() as conn:
             conn.execute(CREATE_TABLE)
             conn.execute(ADD_POST_AUTHOR_IP)
+            conn.execute(ADD_POST_PHOTOS)
             conn.execute(UNIQUE_POST_PER_USER)
             row = conn.execute(
                 """
@@ -158,7 +181,7 @@ def save_post(author_ip, event_id, hook_id, learning_ids, conclusion_id, hashtag
                     learning_ids = EXCLUDED.learning_ids, conclusion_id = EXCLUDED.conclusion_id,
                     hashtag_ids = EXCLUDED.hashtag_ids, post_text = EXCLUDED.post_text
                 RETURNING id, created_at, event_id, hook_id, learning_ids,
-                          conclusion_id, hashtag_ids, post_text
+                          conclusion_id, hashtag_ids, post_text, photo_data
                 """,
                 (author_ip, event_id, hook_id, learning_ids, conclusion_id, hashtag_ids, text),
             ).fetchone()
@@ -172,10 +195,13 @@ def list_posts(limit=None, exclude_client_id=None):
         with _connect() as conn:
             conn.execute(CREATE_TABLE)
             conn.execute(ADD_POST_AUTHOR_IP)
+            conn.execute(ADD_POST_PHOTOS)
             conn.execute(UNIQUE_POST_PER_USER)
             conn.execute("ALTER TABLE posts ADD COLUMN IF NOT EXISTS author_client_id UUID")
+            conn.execute(CREATE_DEMO_STATES_TABLE)
+            conn.execute(BACKFILL_POST_PHOTOS)
             query = """SELECT id, created_at, event_id, hook_id, learning_ids,
-                              conclusion_id, hashtag_ids, post_text FROM posts"""
+                              conclusion_id, hashtag_ids, post_text, photo_data FROM posts"""
             params = []
             if exclude_client_id is not None:
                 query += " WHERE author_client_id IS DISTINCT FROM %s"
@@ -287,22 +313,24 @@ CREATE TABLE IF NOT EXISTS user_posts (
 """
 
 
-def save_user_post(client_id, event_id, text, composer_input):
+def save_user_post(client_id, event_id, text, composer_input, photos):
     try:
         with _connect() as conn:
             conn.execute(CREATE_USER_POSTS)
             conn.execute(CREATE_TABLE)
+            conn.execute(ADD_POST_PHOTOS)
             conn.execute("ALTER TABLE posts ADD COLUMN IF NOT EXISTS author_client_id UUID")
             conn.execute("CREATE UNIQUE INDEX IF NOT EXISTS posts_author_client_id_unique ON posts(author_client_id) WHERE author_client_id IS NOT NULL")
             conn.execute(
-                """INSERT INTO posts (author_client_id, event_id, hook_id, learning_ids, conclusion_id, hashtag_ids, post_text)
-                   VALUES (%s, %s, %s, %s, %s, %s, %s)
+                """INSERT INTO posts (author_client_id, event_id, hook_id, learning_ids, conclusion_id, hashtag_ids, post_text, photo_data)
+                   VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
                    ON CONFLICT (author_client_id) WHERE author_client_id IS NOT NULL DO UPDATE SET
                      created_at = now(), event_id = EXCLUDED.event_id, hook_id = EXCLUDED.hook_id,
                      learning_ids = EXCLUDED.learning_ids, conclusion_id = EXCLUDED.conclusion_id,
-                     hashtag_ids = EXCLUDED.hashtag_ids, post_text = EXCLUDED.post_text""",
+                     hashtag_ids = EXCLUDED.hashtag_ids, post_text = EXCLUDED.post_text,
+                     photo_data = EXCLUDED.photo_data""",
                 (client_id, event_id, composer_input['hookId'], composer_input['learningIds'],
-                 composer_input['conclusionId'], composer_input['hashtagIds'], text),
+                 composer_input['conclusionId'], composer_input['hashtagIds'], text, Jsonb(photos)),
             )
             conn.execute(
                 """INSERT INTO user_posts (client_id, event_id, post_text)
@@ -328,6 +356,7 @@ def delete_browser_post(client_id):
             conn.execute(CREATE_USER_POSTS)
             conn.execute(CREATE_DEMO_STATES_TABLE)
             conn.execute(CREATE_TABLE)
+            conn.execute(ADD_POST_PHOTOS)
             conn.execute("ALTER TABLE posts ADD COLUMN IF NOT EXISTS author_client_id UUID")
             conn.execute("DELETE FROM posts WHERE author_client_id = %s", (client_id,))
             conn.execute("DELETE FROM user_posts WHERE client_id = %s", (client_id,))
