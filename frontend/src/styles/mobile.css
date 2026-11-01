@@ -1,0 +1,49 @@
+/* Compact app chrome on phones without shrinking tap targets or the 3D room. */
+@media (max-width: 480px) {
+  .app {
+    gap: 10px;
+    padding: 10px 10px calc(88px + env(safe-area-inset-bottom, 0px));
+    font-size: 14px;
+  }
+
+  .app.dorm-page { padding-bottom: calc(92px + env(safe-area-inset-bottom, 0px)); }
+  .app h1 { font-size: 19px; }
+  .app h2 { font-size: 18px; }
+  .page-with-header, .composer, .social { gap: 10px; }
+  .card { padding: 12px; }
+  .btn { min-height: 44px; padding: 10px 12px; font-size: 14px; }
+
+  .app-header { flex-basis: 64px; height: 64px; }
+  .app-wordmark { font-size: 21px; }
+  .app-header .xp-row { font-size: 9.5px; }
+  .app-header .xp-row strong { font-size: 10px; }
+
+  .dock {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) 68px repeat(2, minmax(0, 1fr));
+    gap: 4px;
+    padding: 8px 8px calc(8px + env(safe-area-inset-bottom, 0px));
+  }
+  .dock-item { min-height: 44px; padding: 6px 2px; font-size: 10px; }
+  .dock-item .dock-icon { font-size: 19px; }
+  .dock-item.dock-home { width: 68px; height: 68px; margin-top: -22px; padding: 0; }
+  .dock-home .dock-icon { font-size: 25px; }
+
+  .event-actions .btn { line-height: 1.25; }
+  .feed-post { padding: 12px; }
+  .photo-grid { gap: 6px; }
+  .prompt-row { gap: 8px; padding: 8px; }
+  .prompt-actions { gap: 6px; }
+  .prompt-thumb { width: 40px; height: 40px; }
+  .cam-overlay { gap: 8px; padding: 12px; font-size: 13px; }
+  .cam-overlay p { margin: 0; }
+  .worksheet-card { padding: 12px; }
+  .worksheet { font-size: 15px; line-height: 2; }
+  .choice { padding: 10px; }
+  .gift-card { min-height: 320px; }
+  .gift-visual { min-height: 250px; }
+  .gift-iframe { height: 250px; }
+}
+
+@media (min-width: 340px) and (max-width: 374px) {
+  .event-actions { flex-direction: row; }
+}

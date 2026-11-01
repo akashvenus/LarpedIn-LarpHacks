@@ -37,6 +37,13 @@ export async function deleteStandUp(clientId: string, postId: number): Promise<v
   if (!res.ok) throw new ApiError(`Could not delete Stand-Up: ${res.status}`);
 }
 
+export async function updateStandUp(clientId: string, postId: number, win: string, nextStep: string): Promise<StandUpPost> {
+  const res = await fetch(`${apiBase}/api/stand-ups/${encodeURIComponent(clientId)}/${postId}`, {
+    method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ win, nextStep }),
+  });
+  return await parseJson(res) as StandUpPost;
+}
+
 async function parseJson(res: Response): Promise<unknown> {
   if (!res.ok) {
     throw new ApiError(`API ${res.status} ${res.statusText}`.trim());

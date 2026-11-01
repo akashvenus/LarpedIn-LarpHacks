@@ -4,6 +4,7 @@ import { BackSide, CanvasTexture, CatmullRomCurve3, Color, Group, SRGBColorSpace
 import { AvatarItem, HoodieLook } from '../../assets/manifest';
 import { AccessoryId, HeldPropId } from '../../domain/gear';
 import { dampFactor } from './movement';
+import { speakerStrapAngle } from './speakerBadge';
 
 const SKIN = '#f7f7f9';
 const INK = '#14122b';
@@ -252,7 +253,7 @@ function Accessory({ item, xpPulse }: { item: AccessoryId; xpPulse: number }) {
   );
   return (
     <group>
-      {[-1, 1].map((side) => <mesh key={side} position={[side * 0.065, 0.52, 0.18]} rotation={[0, 0, side * 0.5]}>
+      {[-1, 1].map((side) => <mesh key={side} position={[side * 0.065, 0.52, 0.18]} rotation={[0, 0, speakerStrapAngle(side)]}>
         <cylinderGeometry args={[0.008, 0.008, 0.18, 8]} /><meshBasicMaterial color="#0a66c2" toneMapped={false} />
       </mesh>)}
       <mesh position={[0, 0.405, 0.205]}><boxGeometry args={[0.115, 0.09, 0.015]} /><meshBasicMaterial color="#faf8ef" toneMapped={false} /></mesh>

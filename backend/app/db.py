@@ -72,6 +72,20 @@ def save_stand_up(client_id, payload):
         raise DatabaseUnavailable("Could not save stand-up") from error
 
 
+def update_stand_up(client_id, post_id, payload):
+    try:
+        with _connect() as conn:
+            conn.execute(CREATE_STAND_UPS_TABLE)
+            row = conn.execute(
+                """UPDATE stand_up_posts SET win = %s, next_step = %s
+                   WHERE id = %s AND client_id = %s RETURNING *""",
+                (payload.win.strip(), payload.nextStep.strip(), post_id, client_id),
+            ).fetchone()
+            return _stand_up(row, client_id) if row else None
+    except psycopg.Error as error:
+        raise DatabaseUnavailable("Could not update stand-up") from error
+
+
 def delete_stand_up(client_id, post_id):
     try:
         with _connect() as conn:

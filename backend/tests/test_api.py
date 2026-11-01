@@ -507,9 +507,17 @@ def test_stand_up_routes_keep_daily_posts_separate_and_owned(monkeypatch):
         posts.remove(match)
         return True
 
+    def update(client_id, post_id, payload):
+        match = next((p for p in posts if p['id'] == post_id and p['client'] == str(client_id)), None)
+        if not match:
+            return None
+        match.update(win=payload.win.strip(), nextStep=payload.nextStep.strip())
+        return {**match, 'isOwn': True}
+
     monkeypatch.setattr(main, 'save_stand_up', save)
     monkeypatch.setattr(main, 'list_stand_ups', listing)
     monkeypatch.setattr(main, 'delete_stand_up', remove)
+    monkeypatch.setattr(main, 'update_stand_up', update)
     payload = {'localDate': '2026-01-02', 'name': 'Sam', 'headline': 'Builder', 'win': 'Shipped', 'nextStep': ''}
     assert client.post(f'/api/stand-ups/{first}', json=payload).status_code == 201
     assert client.post(f'/api/stand-ups/{first}', json=payload).status_code == 409
@@ -517,6 +525,12 @@ def test_stand_up_routes_keep_daily_posts_separate_and_owned(monkeypatch):
     assert client.post(f'/api/stand-ups/{first}', json={**payload, 'localDate': '2026-01-03'}).status_code == 201
     listed = client.get(f'/api/stand-ups/{first}').json()['posts']
     assert [p['isOwn'] for p in listed] == [True, False, True]
+    assert client.put(f'/api/stand-ups/{second}/1', json={'win': 'Other user', 'nextStep': ''}).status_code == 404
+    assert client.put(f'/api/stand-ups/{first}/1', json={'win': ' ', 'nextStep': ''}).status_code == 422
+    updated = client.put(f'/api/stand-ups/{first}/1', json={'win': ' Revised ', 'nextStep': 'Ship'})
+    assert updated.status_code == 200 and updated.json()['win'] == 'Revised'
+    assert updated.json()['localDate'] == payload['localDate']
+    assert client.post(f'/api/stand-ups/{first}', json=payload).status_code == 409
     assert client.delete(f'/api/stand-ups/{second}/1').status_code == 404
     assert client.delete(f'/api/stand-ups/{first}/1').status_code == 204
     assert client.post(f'/api/stand-ups/{first}', json=payload).status_code == 201
@@ -539,6 +553,8 @@ def test_stand_up_validation_and_database_failure(monkeypatch):
     monkeypatch.setattr(main, 'list_stand_ups', unavailable)
     monkeypatch.setattr(main, 'save_stand_up', unavailable)
     monkeypatch.setattr(main, 'delete_stand_up', unavailable)
+    monkeypatch.setattr(main, 'update_stand_up', unavailable)
     assert client.get(url).status_code == 503
     assert client.post(url, json={**payload, 'win': 'fine'}).status_code == 503
     assert client.delete(f'{url}/1').status_code == 503
+    assert client.put(f'{url}/1', json={'win': 'fine', 'nextStep': ''}).status_code == 503

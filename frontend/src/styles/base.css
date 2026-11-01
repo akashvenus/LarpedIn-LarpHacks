@@ -128,6 +128,11 @@ h1, h2 {
   letter-spacing: -0.01em;
 }
 
+.app h1 {
+  font-size: 20px;
+  line-height: 1.2;
+}
+
 h2 {
   font-size: 20px;
 }
@@ -218,7 +223,7 @@ h2 {
   backdrop-filter: blur(14px);
   border-top: 1px solid var(--line);
   display: grid;
-  grid-template-columns: repeat(5, 1fr);
+  grid-template-columns: repeat(2, minmax(0, 1fr)) 72px repeat(2, minmax(0, 1fr));
   gap: 6px;
   z-index: 20;
 }
@@ -256,32 +261,28 @@ h2 {
 
 .dock-item.dock-home {
   position: relative;
-  justify-content: flex-end;
-  padding-top: 36px;
-  background: transparent;
-}
-
-.dock-home .dock-icon {
-  position: absolute;
-  top: -22px;
-  left: 50%;
-  display: grid;
-  place-items: center;
-  width: 56px;
-  height: 56px;
+  justify-self: center;
+  align-self: end;
+  justify-content: center;
+  width: 72px;
+  height: 72px;
+  margin-top: -24px;
+  padding: 0;
   border: 1px solid var(--line);
   border-radius: 50%;
   background: var(--surface);
   box-shadow: 0 -2px 8px rgba(0, 0, 0, 0.08);
-  font-size: 27px;
-  transform: translateX(-50%);
 }
 
-.dock-item.dock-home.active .dock-icon {
+.dock-home .dock-icon {
+  font-size: 27px;
+}
+
+.dock-item.dock-home.active {
   background: var(--surface-2);
   border-color: #aacde9;
-  transform: translateX(-50%);
 }
+.dock-item.dock-home.active .dock-icon { transform: none; }
 
 /* ---------- Cards ---------- */
 
@@ -370,25 +371,16 @@ h2 {
 
 /* ---------- Dorm ---------- */
 
-.dorm-header {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
+.dorm-page {
+  height: 100dvh;
+  padding-bottom: calc(100px + env(safe-area-inset-bottom, 0px));
 }
 
-.dorm-header h1 {
-  margin: 0;
-}
-
-.dorm-header .xp-wrap {
-  padding: 10px 12px;
-}
-
-/* Height leaves room for the header and dock on a phone without scrolling. */
+/* The room fills the space between the header and the raised dock. */
 .dorm-scene {
   position: relative;
-  flex: none;
-  height: clamp(320px, calc(100dvh - 300px), 620px);
+  flex: 1 0 220px;
+  min-height: 220px;
   border-radius: var(--radius);
   overflow: hidden;
   border: 1px solid var(--line);
@@ -1027,6 +1019,15 @@ h2 {
 
 /* Shared navigation and interaction styling across the app. */
 .topbar { padding: 8px 10px; background: var(--surface); border: 1px solid var(--line); border-radius: 10px; }
+.app-header { flex: 0 0 68px; height: 68px; gap: 8px; }
+.app-wordmark { flex: none; font-size: 23px; line-height: 1.1; white-space: nowrap; }
+.app-header .xp-wrap { flex: 1; min-width: 0; gap: 4px; }
+.app-header .xp-row { gap: 4px; font-size: 10px; }
+.app-header .xp-row span { line-height: 1.15; }
+.app-header .xp-row strong { flex: none; font-size: 11px; }
+.app-header .xp-bar { height: 8px; }
+.app-header .icon-btn { flex: none; }
+.onboarding-page .splash { min-height: 0; flex: 1; padding: 24px 8px; }
 .icon-btn { background: transparent; border-color: transparent; color: #454545; }
 .icon-btn:hover { background: var(--surface-2); }
 .btn:focus-visible, .icon-btn:focus-visible, .dock-item:focus-visible { outline: 2px solid #0a66c2; outline-offset: 2px; }

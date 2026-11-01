@@ -55,6 +55,7 @@
 
 .prompt-row {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   justify-content: space-between;
   gap: 12px;
@@ -70,6 +71,7 @@
 
 .prompt-copy {
   display: flex;
+  flex: 1 1 120px;
   flex-direction: column;
   gap: 2px;
   min-width: 0;
@@ -85,6 +87,7 @@
   align-items: center;
   gap: 8px;
   flex-shrink: 0;
+  margin-left: auto;
 }
 
 .prompt-thumb {
@@ -98,16 +101,28 @@
 }
 
 .snap-btn {
-  padding: 8px 12px;
-  font-size: 13px;
-  white-space: nowrap;
+  display: grid;
+  place-items: center;
+  width: 44px;
+  min-width: 44px;
+  height: 44px;
+  padding: 0;
 }
 
-.prompt-check {
-  color: var(--ok);
-  font-size: 20px;
-  font-weight: 700;
+.photo-delete {
+  display: grid;
+  place-items: center;
+  width: 44px;
+  min-width: 44px;
+  height: 44px;
+  padding: 0;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--surface);
+  color: #9b2c24;
+  cursor: pointer;
 }
+.photo-delete:focus-visible { outline: 2px solid var(--teal); outline-offset: 2px; }
 
 /* The camera overlay sits on the live image and needs its own contrast. */
 .cam-overlay { color: #ffffff; }
