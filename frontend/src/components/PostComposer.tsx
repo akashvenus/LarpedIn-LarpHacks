@@ -35,13 +35,24 @@ export function PostComposer({ event, options, onCompose, onComposed }: PostComp
     );
   };
 
-  /** Deterministic curated preset, no live model call. */
+  /** "AI take the wheel": no model and no hardcoded preset — just picks
+   *  random valid options (distinct learnings/hashtags, 1–3 hashtags). */
   const aiTakeTheWheel = () => {
     if (options.hooks.length === 0 || options.learnings.length < 3) return;
-    setHookId(options.hooks[0].id);
-    setLearningIds(options.learnings.slice(0, 3).map((l) => l.id));
-    setConclusionId(options.conclusions[0]?.id ?? null);
-    setHashtagIds(options.hashtags.slice(0, 2).map((h) => h.id));
+    const pick = <T,>(arr: T[]): T => arr[Math.floor(Math.random() * arr.length)];
+    const shuffle = <T,>(arr: T[]): T[] => {
+      const copy = [...arr];
+      for (let i = copy.length - 1; i > 0; i -= 1) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [copy[i], copy[j]] = [copy[j], copy[i]];
+      }
+      return copy;
+    };
+    setHookId(pick(options.hooks).id);
+    setLearningIds(shuffle(options.learnings).slice(0, 3).map((l) => l.id));
+    setConclusionId(pick(options.conclusions).id);
+    const hashtagCount = 1 + Math.floor(Math.random() * 3);
+    setHashtagIds(shuffle(options.hashtags).slice(0, hashtagCount).map((h) => h.id));
   };
 
   const handleCompose = async () => {

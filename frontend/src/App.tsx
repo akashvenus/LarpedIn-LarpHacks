@@ -8,7 +8,7 @@ import { PostComposer } from './components/PostComposer';
 import { SocialDemo } from './components/SocialDemo';
 import { Trophies } from './components/Trophies';
 import { demoReducer, initialState } from './domain/reducer';
-import { badgeUnlocked, derivedXp, giftEligible, lightsUnlocked, micUnlocked, photoList } from './domain/selectors';
+import { badgeUnlocked, derivedXp, giftEligible, micUnlocked, photoList } from './domain/selectors';
 import { ComposerInput, DemoData, PromptId } from './domain/types';
 
 type Screen = 'dorm' | 'events' | 'camera' | 'trophies' | 'composer' | 'gift' | 'social';
@@ -112,12 +112,14 @@ export default function App() {
       {screen === 'dorm' && (
         <Dorm
           xp={derivedXp(state)}
-          micUnlocked={micUnlocked(state)}
-          lightsUnlocked={lightsUnlocked(state)}
           standUpSubmitted={state.standUpSubmitted}
           standUpBullets={state.standUpBullets}
           onSubmitStandUp={(b1, b2) => dispatch({ type: 'SUBMIT_STAND_UP', bullet1: b1, bullet2: b2 })}
           onFindEvent={() => setScreen('events')}
+          avatarItem={state.avatarItem}
+          roomItems={state.roomItems}
+          onSelectAvatar={(itemId) => dispatch({ type: 'SET_AVATAR_ITEM', itemId })}
+          onToggleRoomItem={(itemId) => dispatch({ type: 'TOGGLE_ROOM_ITEM', itemId })}
         />
       )}
 
@@ -184,7 +186,7 @@ export default function App() {
         <Trophies
           badgeUnlocked={badgeUnlocked(state)}
           micUnlocked={micUnlocked(state)}
-          lightsUnlocked={lightsUnlocked(state)}
+          lightsPlaced={state.roomItems.includes('rgb-lights')}
           standUpSubmitted={state.standUpSubmitted}
         />
       )}

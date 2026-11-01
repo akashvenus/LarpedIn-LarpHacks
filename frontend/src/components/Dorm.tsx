@@ -1,33 +1,43 @@
 import { useState } from 'react';
-import { ASSETS } from '../assets/manifest';
+import { ASSETS, AVATAR_ITEMS, ROOM_ITEMS } from '../assets/manifest';
+import { InventoryPanel } from './InventoryPanel';
 
 export interface DormProps {
   xp: number;
-  micUnlocked: boolean;
-  lightsUnlocked: boolean;
   standUpSubmitted: boolean;
   standUpBullets: { bullet1: string; bullet2: string } | null;
   onSubmitStandUp: (bullet1: string, bullet2: string) => void;
   onFindEvent: () => void;
+  avatarItem: string;
+  roomItems: string[];
+  onSelectAvatar: (itemId: string) => void;
+  onToggleRoomItem: (itemId: string) => void;
 }
 
 /**
- * Dorm screen (F1): backdrop, avatar, internship XP bar, unlockable
- * cosmetics in fixed slots, event CTA, and the optional two-bullet
- * stand-up (+5 XP, can never unlock the gift on its own). The completed
- * stand-up keeps its content for the rest of the session.
+ * Dorm screen (F1): room backdrop with the avatar in a fixed anchor,
+ * a briefcase button (top-right of the room view) that opens the
+ * inventory — one panel for avatar looks and static room decor — plus
+ * the XP bar, event CTA, and the optional two-bullet stand-up.
  */
 export function Dorm({
   xp,
-  micUnlocked,
-  lightsUnlocked,
   standUpSubmitted,
   standUpBullets,
   onSubmitStandUp,
   onFindEvent,
+  avatarItem,
+  roomItems,
+  onSelectAvatar,
+  onToggleRoomItem,
 }: DormProps) {
+  const [inventoryOpen, setInventoryOpen] = useState(false);
   const [bullet1, setBullet1] = useState('');
   const [bullet2, setBullet2] = useState('');
+
+  const avatarEntry = AVATAR_ITEMS.find((item) => item.id === avatarItem);
+  const avatarAsset = avatarEntry?.asset ?? ASSETS.avatar;
+  const avatarScale = avatarEntry?.scale ?? 1;
 
   return (
     <>
@@ -56,18 +66,27 @@ export function Dorm({
 
       <div className="dorm-scene" aria-label="Your dorm room">
         <img className="dorm-bg" src={ASSETS.dormBackground} alt="" />
-        {lightsUnlocked && (
-          <div className="dorm-slot slot-lights">
-            <img className="item" src={ASSETS.rgbLights} alt="RGB lights, unlocked" />
+        {ROOM_ITEMS.filter((item) => roomItems.includes(item.id)).map((item) => (
+          <div key={item.id} className={`dorm-slot ${item.slot}`}>
+            <img className="item" src={item.asset} alt={`${item.name}, placed`} />
           </div>
-        )}
+        ))}
         <div className="dorm-slot slot-avatar">
           <img
             className="item"
-            src={micUnlocked ? ASSETS.avatarMic : ASSETS.avatar}
-            alt={micUnlocked ? 'You, holding your microphone' : 'You, in the dorm'}
+            src={avatarAsset}
+            style={avatarScale !== 1 ? { transform: `scale(${avatarScale})` } : undefined}
+            alt="You, in the dorm"
           />
         </div>
+        <button
+          className="dorm-inventory-btn"
+          onClick={() => setInventoryOpen(true)}
+          aria-label="Open inventory"
+          title="Inventory"
+        >
+          🧳
+        </button>
       </div>
 
       <div className="dorm-cta-row">
@@ -121,6 +140,15 @@ export function Dorm({
           </>
         )}
       </section>
+
+      <InventoryPanel
+        open={inventoryOpen}
+        avatarItem={avatarItem}
+        roomItems={roomItems}
+        onSelectAvatar={onSelectAvatar}
+        onToggleRoomItem={onToggleRoomItem}
+        onClose={() => setInventoryOpen(false)}
+      />
     </>
   );
 }
