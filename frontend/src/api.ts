@@ -1,3 +1,4 @@
+/// <reference types="vite/client" />
 import { ComposerInput, DemoData } from './domain/types';
 import { MOCK_DEMO } from './demo/mockDemo';
 
@@ -13,6 +14,8 @@ import { MOCK_DEMO } from './demo/mockDemo';
 
 export class ApiError extends Error {}
 
+const apiBase = import.meta.env.DEV ? 'http://127.0.0.1:8000' : '';
+
 async function parseJson(res: Response): Promise<unknown> {
   if (!res.ok) {
     throw new ApiError(`API ${res.status} ${res.statusText}`.trim());
@@ -22,7 +25,7 @@ async function parseJson(res: Response): Promise<unknown> {
 
 export async function fetchDemo(): Promise<{ data: DemoData; source: 'api' | 'mock' }> {
   try {
-    const res = await fetch('/api/demo', { headers: { Accept: 'application/json' } });
+    const res = await fetch(`${apiBase}/api/demo`, { headers: { Accept: 'application/json' } });
     if (res.ok) {
       return { data: (await parseJson(res)) as DemoData, source: 'api' };
     }
@@ -37,7 +40,7 @@ export async function fetchDemo(): Promise<{ data: DemoData; source: 'api' | 'mo
 }
 
 export async function compose(input: ComposerInput): Promise<string> {
-  const res = await fetch('/api/compose', {
+  const res = await fetch(`${apiBase}/api/compose`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(input),
@@ -85,9 +88,13 @@ export function localCompose(input: ComposerInput, demo: DemoData): string {
 
   const text = [
     find(demo.composer.hooks, input.hookId)!.text,
-    `I just wrapped up ${event.title}.`,
-    ...learningIds.map((id) => `\u2022 ${find(demo.composer.learnings, id)!.text}`),
+    '',
+    `I recently attended ${event.title}. Here are three things I learned:`,
+    '',
+    ...learningIds.map((id, index) => `${index + 1}. ${find(demo.composer.learnings, id)!.text}`),
+    '',
     find(demo.composer.conclusions, input.conclusionId)!.text,
+    '',
     hashtagIds.map((id) => find(demo.composer.hashtags, id)!.text).join(' '),
   ].join('\n');
 
