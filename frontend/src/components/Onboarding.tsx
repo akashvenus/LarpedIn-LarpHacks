@@ -10,7 +10,6 @@ export function Onboarding({ onComplete }: { onComplete: (name: string, occupati
   return (
     <div className="splash onboarding">
       <form className="splash-card onboarding-card" onSubmit={submit}>
-        <h1 className="brand-logo" aria-label="LarpedIn">Larped<span>in</span></h1>
         <h2>Make your introduction</h2>
         <p className="muted">Tell us how you want to appear on your demo profile.</p>
         <label className="personal-field">Name<input autoComplete="name" maxLength={100} value={name} onChange={(event) => setName(event.target.value)} required /></label>

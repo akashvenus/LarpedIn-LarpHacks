@@ -37,7 +37,7 @@ export interface DormProps {
 }
 
 /**
- * Dorm screen (F1): internship XP bar, walkable room with a briefcase button
+ * Dorm screen (F1): walkable room with a briefcase button
  * (top-right) that opens the inventory of avatar looks and toggled decor,
  * journey guidance, and the optional two-bullet stand-up.
  */
@@ -84,26 +84,6 @@ export function Dorm({
 
   return (
     <>
-      <header className="dorm-header">
-        <h1 className="brand-logo" aria-label="LarpedIn">Larped<span>in</span></h1>
-        <div className="card xp-wrap">
-          <div className="xp-row">
-            <span>Progress toward a tech-bro VC startup internship (with equity)</span>
-            <strong>{xp}/100 XP</strong>
-          </div>
-          <div
-            className="xp-bar"
-            role="progressbar"
-            aria-valuenow={xp}
-            aria-valuemin={0}
-            aria-valuemax={100}
-            aria-label="Progress toward a tech-bro VC startup internship with equity"
-          >
-            <div className="xp-fill" style={{ width: `${xp}%` }} />
-          </div>
-        </div>
-      </header>
-
       {!standUpToday && (
         <div className="standup-entry">
           <button type="button" className="standup-shortcut" aria-expanded={isStandUpOpen}

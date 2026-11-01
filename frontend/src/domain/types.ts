@@ -159,6 +159,7 @@ export type DemoAction =
   | { type: 'SET_PROFILE_PHOTO'; promptId: PromptId }
   | { type: 'SELECT_EVENT'; eventId: string }
   | { type: 'CAPTURE'; dataUrl: string; promptId: PromptId }
+  | { type: 'DELETE_PHOTO'; promptId: PromptId }
   | { type: 'CHECK_PROMPT'; promptId: PromptId }
   | { type: 'SET_HOOK'; hookId: string }
   | { type: 'TOGGLE_LEARNING'; learningId: string }

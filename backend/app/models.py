@@ -4,17 +4,26 @@ from typing import Literal
 from pydantic import BaseModel, Field, model_validator
 
 
-class StandUpRequest(BaseModel):
-    localDate: date
-    name: str = Field(min_length=1, max_length=100)
-    headline: str = Field(min_length=1, max_length=160)
+class StandUpEditRequest(BaseModel):
     win: str = Field(default="", max_length=500)
     nextStep: str = Field(default="", max_length=500)
 
     @model_validator(mode="after")
-    def validate_text(self):
-        if not self.name.strip() or not self.headline.strip() or not (self.win.strip() or self.nextStep.strip()):
-            raise ValueError("A profile and at least one stand-up answer are required")
+    def validate_answers(self):
+        if not (self.win.strip() or self.nextStep.strip()):
+            raise ValueError("At least one stand-up answer is required")
+        return self
+
+
+class StandUpRequest(StandUpEditRequest):
+    localDate: date
+    name: str = Field(min_length=1, max_length=100)
+    headline: str = Field(min_length=1, max_length=160)
+
+    @model_validator(mode="after")
+    def validate_profile(self):
+        if not self.name.strip() or not self.headline.strip():
+            raise ValueError("A profile is required")
         return self
 
 

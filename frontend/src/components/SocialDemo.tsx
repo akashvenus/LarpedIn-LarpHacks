@@ -1,5 +1,8 @@
 import { ASSETS } from '../assets/manifest';
 import { Repeat2 } from 'lucide-react';
+import { useState } from 'react';
+import { PostActions } from './PostActions';
+import { StandUpEditor } from './StandUpEditor';
 import { CommunityPost, PhotoRef, PROMPTS, PromptId, StandUpPost } from '../domain/types';
 
 export interface SocialDemoProps {
@@ -16,6 +19,7 @@ export interface SocialDemoProps {
   standUpBusy: boolean;
   standUpError: string | null;
   onDeleteStandUp: (post: StandUpPost) => void;
+  onSaveStandUp: (post: StandUpPost, win: string, nextStep: string) => Promise<boolean>;
   feedError: string | null;
   onPublish: (text: string) => void;
   onEdit?: () => void;
@@ -43,6 +47,7 @@ export function SocialDemo({
   standUpBusy,
   standUpError,
   onDeleteStandUp,
+  onSaveStandUp,
   feedError,
   onPublish,
   onEdit,
@@ -53,6 +58,7 @@ export function SocialDemo({
   error,
   replacing,
 }: SocialDemoProps) {
+  const [editingStandUp, setEditingStandUp] = useState<StandUpPost | null>(null);
   const avatar = photos.find((photo) => photo.promptId === profilePhoto)?.url
     ?? photos.find((photo) => photo.promptId === 'selfie')?.url
     ?? photos[0]?.url ?? ASSETS.avatar;
@@ -72,8 +78,7 @@ export function SocialDemo({
   ].sort((a, b) => Date.parse(b.post.createdAt) - Date.parse(a.post.createdAt));
 
   const communityFeed = (
-    <section className="card">
-      <h3>Community feed</h3>
+    <section className="community-feed" aria-label="Community feed">
       {feedError && <p className="form-error" role="alert">{feedError}</p>}
       {standUpError && <p className="form-error" role="alert">{standUpError}</p>}
       {!feedError && feedItems.length === 0 && <p className="muted">No community posts yet.</p>}
@@ -82,7 +87,7 @@ export function SocialDemo({
           <div className="feed-head">
             <img className="feed-avatar" src={item.post.isOwn ? avatar : ASSETS.avatar} alt="" />
             <div><strong>{item.post.name}</strong><div className="muted feed-time">{item.post.headline} · {new Date(item.post.createdAt).toLocaleString()}</div></div>
-            {item.post.isOwn && <button type="button" className="post-delete" aria-label="Delete Stand-Up" title="Delete Stand-Up" disabled={standUpBusy} onClick={() => onDeleteStandUp(item.post)}>🗑️</button>}
+            {item.post.isOwn && <PostActions label="Stand-Up" busy={standUpBusy} onEdit={() => setEditingStandUp(item.post)} onDelete={() => onDeleteStandUp(item.post)} />}
           </div>
           <p className="muted feed-time">Daily Stand-Up</p>
           {item.post.win && <p className="feed-text"><strong>The win: </strong>{item.post.win}</p>}
@@ -103,6 +108,7 @@ export function SocialDemo({
 
   return (
     <div className="social">
+      {editingStandUp && <StandUpEditor post={editingStandUp} busy={standUpBusy} error={standUpError} onSave={onSaveStandUp} onClose={() => setEditingStandUp(null)} />}
       {error && <p className="post-action-error" role="alert">{error}</p>}
       {!published ? (
         <>
@@ -152,8 +158,7 @@ export function SocialDemo({
         </>
       ) : (
         <>
-          <section className="card">
-            <h3>Feed</h3>
+          <section className="published-feed" aria-label="Your post">
             <article className="feed-post">
               <div className="feed-head">
                 <img className="feed-avatar" src={avatar} alt="" />
@@ -161,11 +166,10 @@ export function SocialDemo({
                   <strong>{profile.name}</strong>
                   <div className="muted feed-time">{profile.headline} · Just now</div>
                 </div>
-                <button type="button" className="post-delete" aria-label="Delete post" title="Delete post" onClick={onDelete} disabled={busy}>🗑️</button>
+                <PostActions label="Post" busy={busy} onEdit={onReplace} onDelete={onDelete} />
               </div>
               <p className="feed-text">{postText}</p>
               {photoGrid}
-              {onReplace && <button type="button" className="btn social-edit" onClick={onReplace} disabled={busy}>Edit post</button>}
               <div className="feed-fake-actions" aria-hidden>
                 <span>👍 12</span>
                 <span>💬 3</span>

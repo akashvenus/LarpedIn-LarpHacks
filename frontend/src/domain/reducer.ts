@@ -55,6 +55,14 @@ export function demoReducer(state: DemoState, action: DemoAction): DemoState {
       };
     }
 
+    case 'DELETE_PHOTO':
+      if (!state.photos[action.promptId]) return state;
+      return {
+        ...state,
+        photos: { ...state.photos, [action.promptId]: null },
+        profilePhoto: state.profilePhoto === action.promptId ? null : state.profilePhoto,
+      };
+
     case 'CHECK_PROMPT':
       if (
         state.completedPrompts.includes(action.promptId) ||

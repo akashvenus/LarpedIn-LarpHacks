@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useReducer, useRef, useState, type ReactNode } from 'react';
-import { ArrowLeft } from 'lucide-react';
+import { ArrowLeft, Mail } from 'lucide-react';
 import {
   compose,
   fetchAiPreset,
@@ -11,7 +11,7 @@ import {
   saveDemoState,
   saveBrowserPost,
   deleteUserPost,
-  fetchStandUps, publishStandUp, deleteStandUp,
+  fetchStandUps, publishStandUp, deleteStandUp, updateStandUp,
 } from './api';
 import { CameraGuide } from './components/CameraGuide';
 import { Dorm } from './components/Dorm';
@@ -20,6 +20,7 @@ import { GiftReveal } from './components/GiftReveal';
 import { PostComposer } from './components/PostComposer';
 import { Onboarding } from './components/Onboarding';
 import { Inbox } from './components/Inbox';
+import { XpHeader } from './components/XpHeader';
 import { SocialDemo } from './components/SocialDemo';
 import { Trophies } from './components/Trophies';
 import { demoReducer, initialState } from './domain/reducer';
@@ -291,7 +292,7 @@ export default function App() {
   }
 
   if (!state.name?.trim() || !state.occupation?.trim()) {
-    return <Onboarding onComplete={(name, occupation) => dispatch({ type: 'SET_PROFILE', name, occupation })} />;
+    return <div className="app onboarding-page"><XpHeader xp={xp} /><Onboarding onComplete={(name, occupation) => dispatch({ type: 'SET_PROFILE', name, occupation })} /></div>;
   }
 
   const showDock = !['composer', 'gift'].includes(screen);
@@ -430,6 +431,30 @@ export default function App() {
     }
   };
 
+  const handleEditStandUp = async (post: StandUpPost, win: string, nextStep: string): Promise<boolean> => {
+    if (standUpOperation.current || !post.isOwn || !(win.trim() || nextStep.trim())) return false;
+    standUpOperation.current = true;
+    setStandUpBusy(true);
+    setStandUpError(null);
+    try {
+      let updated: StandUpPost;
+      if (isLocalDemo) {
+        updated = { ...post, win: win.trim(), nextStep: nextStep.trim() };
+        window.localStorage.setItem(LOCAL_STAND_UPS_KEY, JSON.stringify(standUps.map((item) => item.id === post.id ? updated : item)));
+      } else {
+        updated = await updateStandUp(clientId.current!, post.id, win, nextStep);
+      }
+      setStandUps((posts) => posts.map((item) => item.id === post.id ? updated : item));
+      return true;
+    } catch (err) {
+      setStandUpError(err instanceof Error ? err.message : 'Could not edit your Stand-Up.');
+      return false;
+    } finally {
+      standUpOperation.current = false;
+      setStandUpBusy(false);
+    }
+  };
+
   const handleComposed = (text: string, input: ComposerInput) => {
     if (editingPost) {
       setReplacement({ text, input });
@@ -442,13 +467,19 @@ export default function App() {
   };
 
   return (
-    <div className={`app${screen === 'social' || screen === 'inbox' ? ' social-page' : ''}`}>
+    <div className={`app${screen === 'social' || screen === 'inbox' ? ' social-page' : ''}${screen === 'dorm' ? ' dorm-page' : ''}`}>
       {saveError && (
         <div role="alert" className="persistence-error">
           {isLocalDemo ? saveError : `Progress could not be saved to the database: ${saveError}`}
         </div>
       )}
       {!saveError && saving && <div className="persistence-status" role="status" aria-label="Saving progress"><span aria-hidden="true" /></div>}
+      <XpHeader xp={xp} showProgress={screen !== 'social'} action={
+        screen === 'social' || screen === 'inbox' ? <button type="button" className="icon-btn social-mail"
+          aria-label={screen === 'inbox' ? 'Back to feed' : 'Open inbox'} onClick={() => navigate(screen === 'inbox' ? 'social' : 'inbox')}>
+          {screen === 'inbox' ? <FeedIcon /> : <Mail size={20} className="nav-arrow" aria-hidden="true" />}
+        </button> : undefined
+      } />
       {screen === 'dorm' && (
         <Dorm
           xp={xp}
@@ -494,6 +525,7 @@ export default function App() {
             completedPrompts={state.completedPrompts}
             photos={state.photos}
             onCapture={handleCapture}
+            onDeletePhoto={(promptId) => dispatch({ type: 'DELETE_PHOTO', promptId })}
             onContinue={() => navigate('composer')}
           />
         ) : (
@@ -554,16 +586,6 @@ export default function App() {
 
       {(screen === 'social' || screen === 'inbox') && (
         <div className="page-with-header">
-          <header className="topbar">
-            <button className="icon-btn" onClick={() => navigate('dorm')} aria-label="Back to dorm">
-              <ArrowLeft size={20} className="nav-arrow" aria-hidden="true" />
-            </button>
-            <span className="brand-logo social-wordmark" aria-label="LarpedIn">Larped<span>in</span></span>
-            {screen === 'inbox' && <span className="social-section">Inbox</span>}
-            <button type="button" className="icon-btn social-mail" aria-label={screen === 'inbox' ? 'Back to feed' : 'Open inbox'} onClick={() => navigate(screen === 'inbox' ? 'social' : 'inbox')}>
-              {screen === 'inbox' ? <FeedIcon /> : '✉️'}
-            </button>
-          </header>
           {screen === 'inbox' ? <Inbox recruiter={demo.recruiter} message={demo.outreachMessage} sent={state.outreachSent} sending={sendingRecruiter} reply={recruiterReplyReady ? state.recruiterReplyOutcome : null} userAvatar={state.photos[state.profilePhoto ?? 'selfie'] ?? state.photos.selfie ?? photoList(state)[0]?.url} /> : <SocialDemo
             profile={{ ...demo.profile, name: state.name, headline: state.occupation }}
             postText={editingPost ? replacement?.text ?? '' : state.postText}
@@ -584,6 +606,7 @@ export default function App() {
             standUpBusy={standUpBusy}
             standUpError={standUpError}
             onDeleteStandUp={(post) => void handleDeleteStandUp(post)}
+            onSaveStandUp={handleEditStandUp}
             feedError={feedError}
           />}
         </div>

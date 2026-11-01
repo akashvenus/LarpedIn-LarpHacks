@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { ArrowRight } from 'lucide-react';
+import { ArrowRight, Camera, Trash2 } from 'lucide-react';
 import { DemoEvent, PromptId, PROMPTS } from '../domain/types';
 
 export interface CameraGuideProps {
@@ -8,6 +8,7 @@ export interface CameraGuideProps {
   /** One object URL per prompt (null = not captured yet). */
   photos: Record<PromptId, string | null>;
   onCapture: (blob: Blob, promptId: PromptId) => void;
+  onDeletePhoto: (promptId: PromptId) => void;
   onContinue: () => void;
 }
 
@@ -34,6 +35,7 @@ export function CameraGuide({
   completedPrompts,
   photos,
   onCapture,
+  onDeletePhoto,
   onContinue,
 }: CameraGuideProps) {
   const videoRef = useRef<HTMLVideoElement>(null);
@@ -198,15 +200,19 @@ export function CameraGuide({
                       alt={`${p.label} capture`}
                     />
                   )}
-                  {done && <span className="prompt-check" aria-label={`${p.label} complete`}>✓</span>}
                   <button
                     className="btn snap-btn"
                     disabled={!live}
+                    aria-label={`${photoUrl ? 'Retake' : 'Take'} ${p.label} photo`}
                     title={photoUrl ? 'Snap again (replaces this photo)' : 'Snap a photo for this checkpoint'}
                     onClick={() => handleSnap(p.id)}
                   >
-                    📷 {photoUrl ? 'Re-snap' : 'Snap'}
+                    <Camera size={18} aria-hidden="true" />
                   </button>
+                  {photoUrl && <button type="button" className="photo-delete" onClick={() => onDeletePhoto(p.id)}
+                    aria-label={`Delete ${p.label} photo`} title={`Delete ${p.label} photo`}>
+                    <Trash2 size={18} aria-hidden="true" />
+                  </button>}
                 </div>
               </li>
             );
