@@ -25,6 +25,12 @@ export interface ComposerInput {
   learningIds: [string, string, string];
   conclusionId: string;
   hashtagIds: string[];
+  format?: 'legacy' | 'personal';
+  customHook?: string;
+  customConclusion?: string;
+  moment?: string;
+  person?: string;
+  nextStep?: string;
 }
 
 export interface AiPreset {

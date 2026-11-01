@@ -5,7 +5,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 
-from .compose import compose_post
+from .compose import compose_personal_post, compose_post
 from .content import CONCLUSIONS, DEMO, EVENTS, HASHTAGS, HOOKS, LEARNINGS
 from .db import DatabaseUnavailable, check_db, list_posts, save_post
 from .gemini import generate_preset
@@ -51,6 +51,17 @@ def compose_from_request(request):
         raise HTTPException(status_code=422, detail="Choose exactly 3 different learnings")
     if not 1 <= len(request.hashtagIds) <= 3 or len(set(request.hashtagIds)) != len(request.hashtagIds):
         raise HTTPException(status_code=422, detail="Choose 1 to 3 different hashtags")
+    if request.format == "personal":
+        # Validate the legacy IDs as well, since they remain part of the saved record.
+        for item_id in request.learningIds:
+            pick(LEARNINGS, item_id, "learningId")
+        return compose_personal_post(
+            pick(EVENTS, request.eventId, "eventId"),
+            pick(HOOKS, request.hookId, "hookId"),
+            pick(CONCLUSIONS, request.conclusionId, "conclusionId"),
+            [pick(HASHTAGS, item_id, "hashtagId") for item_id in request.hashtagIds],
+            request.moment, request.person, request.nextStep, request.customHook, request.customConclusion,
+        )
     return compose_post(
         pick(EVENTS, request.eventId, "eventId"),
         pick(HOOKS, request.hookId, "hookId"),
