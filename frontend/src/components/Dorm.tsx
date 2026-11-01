@@ -1,14 +1,17 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { AVATAR_ITEMS } from '../assets/manifest';
 import { ItemId, SpotId } from '../domain/items';
 import { AccessoryId, HeldPropId } from '../domain/gear';
 import { InventoryPanel } from './InventoryPanel';
 import { DormScene } from './room/DormScene';
 import { parseStandUpDraft } from '../domain/standUp';
+import { JourneyStep } from '../domain/selectors';
 
 export interface DormProps {
   xp: number;
   xpPulse: number;
+  journeyStep: JourneyStep | null;
+  onJourneyNavigate: (step: Exclude<JourneyStep, 'standup'>) => void;
   standUpSubmitted: boolean;
   standUpToday: boolean;
   standUpBusy: boolean;
@@ -18,7 +21,6 @@ export interface DormProps {
   standUpDraft: string;
   onSubmitStandUp: (bullet1: string, bullet2: string) => void;
   onStandUpDraftChange: (draft: string) => void;
-  onFindEvent: () => void;
   avatarItem: string;
   accessory: AccessoryId | null;
   heldProp: HeldPropId | null;
@@ -36,11 +38,13 @@ export interface DormProps {
 /**
  * Dorm screen (F1): internship XP bar, walkable room with a briefcase button
  * (top-right) that opens the inventory of avatar looks and toggled decor,
- * event CTA, and the optional two-bullet stand-up.
+ * journey guidance, and the optional two-bullet stand-up.
  */
 export function Dorm({
   xp,
   xpPulse,
+  journeyStep,
+  onJourneyNavigate,
   standUpSubmitted,
   standUpToday,
   standUpBusy,
@@ -50,7 +54,6 @@ export function Dorm({
   standUpDraft,
   onSubmitStandUp,
   onStandUpDraftChange,
-  onFindEvent,
   avatarItem,
   accessory,
   heldProp,
@@ -67,10 +70,14 @@ export function Dorm({
   const [inventoryOpen, setInventoryOpen] = useState(false);
   const [carryingId, setCarryingId] = useState<ItemId | null>(null);
   const [isStandUpOpen, setIsStandUpOpen] = useState(false);
+  const standUpPanelRef = useRef<HTMLElement>(null);
   const { win, nextStep } = parseStandUpDraft(standUpDraft);
   const updateDraft = (values: { win: string; nextStep: string }) => onStandUpDraftChange(JSON.stringify(values));
 
   useEffect(() => { if (standUpToday) setIsStandUpOpen(false); }, [standUpToday]);
+  useEffect(() => {
+    if (isStandUpOpen) standUpPanelRef.current?.scrollIntoView({ behavior: window.matchMedia?.('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth', block: 'start' });
+  }, [isStandUpOpen]);
 
   const avatarEntry = AVATAR_ITEMS.find((item) => item.id === avatarItem);
 
@@ -108,7 +115,7 @@ export function Dorm({
         </div>
       )}
       {!standUpToday && isStandUpOpen && (
-        <section className="card dorm-standup" id="dorm-standup">
+        <section ref={standUpPanelRef} className="card dorm-standup" id="dorm-standup">
           <h3>Your daily Stand-Up</h3>
           <p className="muted">A little progress report for your very real board of directors.</p>
           <div className="standup-grid">
@@ -146,6 +153,18 @@ export function Dorm({
         carryingId={carryingId}
         onCarryItem={setCarryingId}
       >
+        {journeyStep && !carryingId && !inventoryOpen && (
+          <button type="button" className="journey-banner" onClick={() => {
+            if (journeyStep === 'standup') setIsStandUpOpen(true);
+            else onJourneyNavigate(journeyStep);
+          }}>
+            <span><small>UP NEXT</small><strong>{
+              journeyStep === 'events' ? 'Find an event' : journeyStep === 'standup' ? 'Post your first Stand-Up' :
+              journeyStep === 'camera' ? 'Capture an event photo' : journeyStep === 'social' ? 'Share your post' : 'Create your event post'
+            }</strong></span>
+            <span className="journey-arrow" aria-hidden="true">→</span>
+          </button>
+        )}
         <button
           className="dorm-inventory-btn"
           onClick={() => setInventoryOpen(true)}
@@ -154,32 +173,27 @@ export function Dorm({
         >
           🧳
         </button>
+        <InventoryPanel
+          open={inventoryOpen}
+          avatarItem={avatarItem}
+          accessory={accessory}
+          heldProp={heldProp}
+          xp={xp}
+          onSelectAccessory={onSelectAccessory}
+          onSelectHeldProp={onSelectHeldProp}
+          roomItems={roomItems}
+          onSelectAvatar={onSelectAvatar}
+          onToggleRoomItem={onToggleRoomItem}
+          unlockedItemIds={unlockedItemIds}
+          placements={placements}
+          onCarryItem={setCarryingId}
+          onDropItem={(itemId, x, y) => {
+            window.dispatchEvent(new CustomEvent('room-item-drop', { detail: { itemId, x, y } }));
+            setInventoryOpen(false);
+          }}
+          onClose={() => setInventoryOpen(false)}
+        />
       </DormScene>
-
-      <div className="dorm-cta-row">
-        <button className="btn btn-primary" onClick={onFindEvent}>📅 Find an event</button>
-      </div>
-
-      <InventoryPanel
-        open={inventoryOpen}
-        avatarItem={avatarItem}
-        accessory={accessory}
-        heldProp={heldProp}
-        xp={xp}
-        onSelectAccessory={onSelectAccessory}
-        onSelectHeldProp={onSelectHeldProp}
-        roomItems={roomItems}
-        onSelectAvatar={onSelectAvatar}
-        onToggleRoomItem={onToggleRoomItem}
-        unlockedItemIds={unlockedItemIds}
-        placements={placements}
-        onCarryItem={setCarryingId}
-        onDropItem={(itemId, x, y) => {
-          window.dispatchEvent(new CustomEvent('room-item-drop', { detail: { itemId, x, y } }));
-          setInventoryOpen(false);
-        }}
-        onClose={() => setInventoryOpen(false)}
-      />
     </>
   );
 }

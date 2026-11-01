@@ -3,6 +3,7 @@ import { ASSETS } from '../assets/manifest';
 import { ItemId, ITEMS, ITEMS_BY_UNLOCK, SpotId } from '../domain/items';
 import { ACCESSORIES, HELD_PROPS, AccessoryId, HeldPropId } from '../domain/gear';
 import { AVATAR_ITEMS, ROOM_ITEMS } from '../assets/manifest';
+import { shouldDismissInventory } from './inventorySwipe';
 
 export interface InventoryPanelProps {
   open: boolean;
@@ -47,21 +48,47 @@ export function InventoryPanel({
   const dragRef = useRef<{ itemId: ItemId; x: number; y: number; moved: boolean } | null>(null);
   const suppressClick = useRef(false);
   const [ghost, setGhost] = useState<{ itemId: ItemId; x: number; y: number } | null>(null);
+  const swipeRef = useRef<{ pointerId: number; x: number; y: number } | null>(null);
+  const [swipeOffset, setSwipeOffset] = useState(0);
   if (!open) return null;
 
   return (
     <div className="sheet-backdrop" onClick={onClose} role="presentation">
       <div
-        className="sheet"
+        className={`sheet${swipeOffset > 0 ? ' is-swiping' : ''}`}
         role="dialog"
         aria-label="Inventory"
         onClick={(e) => e.stopPropagation()}
+        onKeyDown={(e) => { if (e.key === 'Escape') onClose(); }}
+        style={{ transform: `translateY(${swipeOffset}px)` }}
       >
-        <header className="sheet-header">
-          <h2 style={{ margin: 0 }}>🧳 Inventory</h2>
-          <button className="icon-btn sheet-close" onClick={onClose} aria-label="Close inventory">
-            ✕
-          </button>
+        <header className="sheet-header"
+          onPointerDown={(event) => {
+            if (!event.isPrimary || event.button !== 0 || (event.target as HTMLElement).closest('button')) return;
+            swipeRef.current = { pointerId: event.pointerId, x: event.clientX, y: event.clientY };
+            event.currentTarget.setPointerCapture(event.pointerId);
+          }}
+          onPointerMove={(event) => {
+            const swipe = swipeRef.current;
+            if (!swipe || swipe.pointerId !== event.pointerId) return;
+            const down = event.clientY - swipe.y;
+            setSwipeOffset(down > Math.abs(event.clientX - swipe.x) ? Math.max(0, down) : 0);
+          }}
+          onPointerUp={(event) => {
+            const swipe = swipeRef.current;
+            if (!swipe || swipe.pointerId !== event.pointerId) return;
+            swipeRef.current = null;
+            setSwipeOffset(0);
+            if (shouldDismissInventory(swipe.x, swipe.y, event.clientX, event.clientY)) onClose();
+          }}
+          onPointerCancel={() => { swipeRef.current = null; setSwipeOffset(0); }}>
+          <span className="sheet-handle" aria-hidden="true" />
+          <div className="sheet-header-row">
+            <h2 style={{ margin: 0 }}>🧳 Inventory</h2>
+            <button className="icon-btn sheet-close" onClick={onClose} aria-label="Close inventory">
+              ✕
+            </button>
+          </div>
         </header>
 
         <section>

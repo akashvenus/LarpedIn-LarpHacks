@@ -188,6 +188,8 @@ Deletes the current IP's post from the shared feed. Returns `204`, or `503` when
 
 The app uses `GET` and `PUT /api/state/{client_id}` for browser-scoped progress and `PUT` and `DELETE /api/user-post/{client_id}` for that browser's single post. Browser IDs are UUIDs retained in local storage and act as demo identifiers, not account authentication. New browser-scoped posts also appear in the shared `GET /api/posts` feed; the optional `exclude_client_id` query parameter omits the current browser's own post. The IP-based endpoints remain available for compatibility. Existing browser-ID and IP-based records stay separate; this change does not infer ownership or migrate records between identities.
 
+Saved progress optionally includes `recruiterReplyOutcome` (`offer` or `rejection`) and `recruiterReplyAt` (Unix milliseconds). Missing fields default to null for older saved progress. The reply is generated in the app and is not a message from the named recruiter.
+
 ### Daily Stand-Ups
 
 `GET /api/stand-ups/{client_id}` returns `{ "posts": [...] }`, ordered newest first. Each post contains `id`, `createdAt`, `localDate`, `name`, `headline`, `win`, `nextStep`, and `isOwn` (relative to the supplied browser UUID). Stand-Ups are separate from event posts.

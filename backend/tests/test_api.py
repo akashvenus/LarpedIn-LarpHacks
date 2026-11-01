@@ -431,10 +431,13 @@ def test_saved_progress_profile_fields_are_backward_compatible():
     legacy = DemoStatePayload.model_validate(payload)
     assert legacy.name == "" and legacy.occupation == "" and legacy.profilePhoto is None
     assert legacy.accessory is None and legacy.heldProp is None
+    assert legacy.recruiterReplyOutcome is None and legacy.recruiterReplyAt is None
     updated = DemoStatePayload.model_validate({**payload, "name": "Sam", "occupation": "Designer", "profilePhoto": "selfie", "currentScreen": "inbox", "outreachPostText": "My post", "accessory": "glasses", "heldProp": "coffee"})
     assert updated.name == "Sam" and updated.profilePhoto == "selfie" and updated.outreachPostText == "My post"
     assert updated.accessory == "glasses" and updated.heldProp == "coffee"
     assert DemoStatePayload.model_validate({**payload, "accessory": "propeller-cap"}).accessory == "propeller-cap"
+    reply = DemoStatePayload.model_validate({**payload, "recruiterReplyOutcome": "offer", "recruiterReplyAt": 12345})
+    assert reply.recruiterReplyOutcome == "offer" and reply.recruiterReplyAt == 12345
 
 
 def test_browser_posts_are_isolated_and_remain_compatible_with_ip_routes(monkeypatch):

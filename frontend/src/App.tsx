@@ -22,7 +22,7 @@ import { Inbox } from './components/Inbox';
 import { SocialDemo } from './components/SocialDemo';
 import { Trophies } from './components/Trophies';
 import { demoReducer, initialState } from './domain/reducer';
-import { badgeUnlocked, derivedXp, micUnlocked, photoList, unlockedItemIds } from './domain/selectors';
+import { badgeUnlocked, derivedXp, micUnlocked, nextJourneyStep, photoList, unlockedItemIds } from './domain/selectors';
 import { CommunityPost, ComposerInput, DemoData, DemoState, PromptId, StandUpPost } from './domain/types';
 import { hasStandUpToday, localDay } from './domain/standUp';
 import { MOCK_DEMO } from './demo/mockDemo';
@@ -44,9 +44,9 @@ function FeedIcon() {
 }
 
 const DOCK: { id: Screen; label: string; icon: ReactNode }[] = [
-  { id: 'dorm', label: 'Dorm', icon: '🏠' },
   { id: 'events', label: 'Events', icon: '📅' },
   { id: 'camera', label: 'Camera', icon: '📷' },
+  { id: 'dorm', label: 'Dorm', icon: '🏠' },
   { id: 'trophies', label: 'Trophies', icon: '🏆' },
   { id: 'social', label: 'Feed', icon: <FeedIcon /> },
 ];
@@ -77,6 +77,7 @@ export default function App() {
   const [postError, setPostError] = useState<string | null>(null);
   const [editingPost, setEditingPost] = useState(false);
   const [sendingRecruiter, setSendingRecruiter] = useState(false);
+  const [recruiterReplyReady, setRecruiterReplyReady] = useState(false);
   const [composerVersion, setComposerVersion] = useState(0);
   const [xpPulse, setXpPulse] = useState(0);
   const previousXp = useRef(0);
@@ -218,6 +219,21 @@ export default function App() {
     const timer = window.setTimeout(() => setSendingRecruiter(false), 1200);
     return () => window.clearTimeout(timer);
   }, [sendingRecruiter]);
+  useEffect(() => {
+    if (!stateLoaded || !state.outreachSent || state.recruiterReplyOutcome) return;
+    dispatch({ type: 'SCHEDULE_RECRUITER_REPLY', outcome: Math.random() < 0.5 ? 'offer' : 'rejection', replyAt: Date.now() + 3000 });
+  }, [stateLoaded, state.outreachSent, state.recruiterReplyOutcome]);
+  useEffect(() => {
+    if (!state.outreachSent || !state.recruiterReplyOutcome || state.recruiterReplyAt === null) {
+      setRecruiterReplyReady(false);
+      return;
+    }
+    const delay = Math.max(0, state.recruiterReplyAt - Date.now());
+    setRecruiterReplyReady(delay === 0);
+    if (delay === 0) return;
+    const timer = window.setTimeout(() => setRecruiterReplyReady(true), delay);
+    return () => window.clearTimeout(timer);
+  }, [state.outreachSent, state.recruiterReplyOutcome, state.recruiterReplyAt]);
   useEffect(() => {
     if (isLocalDemo || screen !== 'social') return;
     let alive = true;
@@ -436,6 +452,8 @@ export default function App() {
         <Dorm
           xp={xp}
           xpPulse={xpPulse}
+          journeyStep={nextJourneyStep(state, standUpsReady, standUps.some((post) => post.isOwn && post.localDate === today))}
+          onJourneyNavigate={(next) => navigate(next)}
           standUpSubmitted={state.standUpSubmitted}
           standUpToday={standUps.some((post) => post.isOwn && post.localDate === today)}
           standUpBusy={standUpBusy}
@@ -445,7 +463,6 @@ export default function App() {
           standUpDraft={state.standUpDraft}
           onSubmitStandUp={(b1, b2) => void handleStandUp(b1, b2)}
           onStandUpDraftChange={(draft) => dispatch({ type: 'SET_STAND_UP_DRAFT', draft })}
-          onFindEvent={() => navigate('events')}
           avatarItem={state.avatarItem}
           accessory={state.accessory}
           heldProp={state.heldProp}
@@ -518,7 +535,7 @@ export default function App() {
           recruiter={demo.recruiter}
           onComplete={() => {
             // Claiming the gift sends the message inside the demo.
-            dispatch({ type: 'GIFT_ANIMATION_DONE' });
+            dispatch({ type: 'GIFT_ANIMATION_DONE', outcome: Math.random() < 0.5 ? 'offer' : 'rejection', replyAt: Date.now() + 4500 });
             setSendingRecruiter(true);
             navigate('inbox');
           }}
@@ -546,7 +563,7 @@ export default function App() {
               {screen === 'inbox' ? <FeedIcon /> : '✉️'}
             </button>
           </header>
-          {screen === 'inbox' ? <Inbox recruiter={demo.recruiter} message={demo.outreachMessage} sent={state.outreachSent} sending={sendingRecruiter} /> : <SocialDemo
+          {screen === 'inbox' ? <Inbox recruiter={demo.recruiter} message={demo.outreachMessage} sent={state.outreachSent} sending={sendingRecruiter} reply={recruiterReplyReady ? state.recruiterReplyOutcome : null} userAvatar={state.photos[state.profilePhoto ?? 'selfie'] ?? state.photos.selfie ?? photoList(state)[0]?.url} /> : <SocialDemo
             profile={{ ...demo.profile, name: state.name, headline: state.occupation }}
             postText={editingPost ? replacement?.text ?? '' : state.postText}
             photos={photoList(state)}
@@ -576,7 +593,7 @@ export default function App() {
           {DOCK.map((item) => (
             <button
               key={item.id}
-              className={`dock-item${screen === item.id ? ' active' : ''}`}
+              className={`dock-item${item.id === 'dorm' ? ' dock-home' : ''}${screen === item.id ? ' active' : ''}`}
               onClick={() => navigate(item.id)}
             >
               <span className="dock-icon" aria-hidden>{item.icon}</span>
