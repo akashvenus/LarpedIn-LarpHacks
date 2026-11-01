@@ -1,0 +1,72 @@
+{
+  "schemaVersion": 1,
+  "events": [
+    {
+      "id": "larphacks",
+      "title": "LarpHacks",
+      "dateLabel": "Today",
+      "venueLabel": "Toronto",
+      "url": "https://luma.com/irn5abpa",
+      "featured": true,
+      "demoExample": false
+    },
+    {
+      "id": "physical-ai-meetup",
+      "title": "Toronto Physical AI Workshop and Meetup",
+      "dateLabel": "November 2026",
+      "venueLabel": "University of Toronto",
+      "url": "https://luma.com/toronto-physical-ai-workshop-and-meetup-nov-2026",
+      "featured": false,
+      "demoExample": false
+    },
+    {
+      "id": "founder-coffee-chat",
+      "title": "Pre-Seed Founder Coffee Chat",
+      "dateLabel": "Dates vary",
+      "venueLabel": "Toronto",
+      "url": "https://luma.com/discover",
+      "featured": false,
+      "demoExample": true
+    }
+  ],
+  "composer": {
+    "hooks": [
+      {"id": "hook-1", "text": "I didn't expect one conversation to change my perspective on building."},
+      {"id": "hook-2", "text": "They told me first-year was too early to think about my personal brand. They were wrong."},
+      {"id": "hook-3", "text": "I walked in with a laptop and left with a framework for life."},
+      {"id": "hook-4", "text": "Most people spent their Sunday resting. I spent mine compounding."}
+    ],
+    "learnings": [
+      {"id": "learn-1", "text": "community is a force multiplier"},
+      {"id": "learn-2", "text": "shipping beats sleeping"},
+      {"id": "learn-3", "text": "every handshake is a warm lead"},
+      {"id": "learn-4", "text": "failure is just pre-revenue learning"},
+      {"id": "learn-5", "text": "the real internship was the network we built along the way"},
+      {"id": "learn-6", "text": "impact starts with showing up and taking a photo"}
+    ],
+    "conclusions": [
+      {"id": "end-1", "text": "Excited to keep building and learning."},
+      {"id": "end-2", "text": "Grateful for the journey, and humbled to be just getting started."},
+      {"id": "end-3", "text": "If you're hiring interns for summer 2027, my inbox is open."}
+    ],
+    "hashtags": [
+      {"id": "ai", "text": "#AI"},
+      {"id": "buildinpublic", "text": "#BuildInPublic"},
+      {"id": "hackathon", "text": "#Hackathon"},
+      {"id": "firstyear", "text": "#FirstYear"},
+      {"id": "opentowork", "text": "#OpenToWork"},
+      {"id": "grateful", "text": "#Grateful"}
+    ]
+  },
+  "profile": {
+    "id": "demo-user",
+    "name": "You",
+    "headline": "First-year CS student | Building in public"
+  },
+  "recruiter": {
+    "id": "recruiter-1",
+    "name": "Alex Morgan",
+    "headline": "Early Careers Recruiter | Fictional"
+  },
+  "outreachMessage": "Hi Alex, I recently attended a tech event and would love to connect about opportunities at the intersection of AI, community, and impact."
+}

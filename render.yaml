@@ -1,0 +1,13 @@
+services:
+  - type: web
+    name: larpedin
+    runtime: python
+    plan: free
+    buildCommand: bash scripts/build.sh
+    startCommand: uv run --project backend --frozen uvicorn app.main:app --app-dir backend --host 0.0.0.0 --port $PORT
+    healthCheckPath: /api/health
+    envVars:
+      - key: PYTHON_VERSION
+        value: "3.14.10"
+      - key: NODE_VERSION
+        value: "22"
