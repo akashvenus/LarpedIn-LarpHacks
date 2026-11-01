@@ -1,0 +1,17 @@
+[project]
+name = "larpedin-larphacks"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+authors = [
+    { name = "Spencer Spiegelman", email = "smspiegelman@uwaterloo.ca" }
+]
+requires-python = ">=3.14"
+dependencies = []
+
+[project.scripts]
+larpedin-larphacks = "larpedin_larphacks:main"
+
+[build-system]
+requires = ["uv_build>=0.12.22,<0.13.0"]
+build-backend = "uv_build"
