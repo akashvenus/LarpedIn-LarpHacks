@@ -136,6 +136,8 @@
   padding-top: 8px;
 }
 
+.repost-icon { vertical-align: -0.2em; }
+
 .inbox-count {
   display: inline-block;
   background: var(--coral);

@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { ExternalLink } from 'lucide-react';
 import { DemoEvent } from '../domain/types';
 import { eventLocked } from '../domain/eventAvailability';
 
@@ -63,12 +64,16 @@ export function Events({ events, selectedEventId, onSelect }: EventsProps) {
                 target="_blank"
                 rel="noopener noreferrer"
               >
-                Open on Luma ↗
+                Open on Luma <ExternalLink size={16} className="action-icon" aria-hidden="true" />
               </a>
             </div>
             </article>
           );
         })}
+        <div className="events-coming-soon">
+          <strong>More events coming soon</strong>
+          <p>Our networking pipeline is currently in stealth mode.</p>
+        </div>
       </div>
     </>
   );

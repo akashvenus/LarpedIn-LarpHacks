@@ -1,4 +1,5 @@
 import { ASSETS } from '../assets/manifest';
+import { Repeat2 } from 'lucide-react';
 import { CommunityPost, PhotoRef, PROMPTS, PromptId, StandUpPost } from '../domain/types';
 
 export interface SocialDemoProps {
@@ -168,7 +169,7 @@ export function SocialDemo({
               <div className="feed-fake-actions" aria-hidden>
                 <span>👍 12</span>
                 <span>💬 3</span>
-                <span>↗ 1 repost</span>
+                <span><Repeat2 size={15} className="repost-icon" aria-hidden="true" /> 1 repost</span>
               </div>
             </article>
           </section>

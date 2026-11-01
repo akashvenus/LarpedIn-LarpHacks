@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { ArrowRight } from 'lucide-react';
 import { DemoEvent, PromptId, PROMPTS } from '../domain/types';
 
 export interface CameraGuideProps {
@@ -117,9 +118,10 @@ export function CameraGuide({
   return (
     <>
       <header>
-        <h1>{event.title} · Photo guide</h1>
+        <h1>{event.title} · Pics or it didn’t happen</h1>
         <p className="muted" style={{ margin: 0 }}>
-          {event.dateLabel} · {event.venueLabel} — snap one per checkpoint, or skip photos below.
+          {event.dateLabel} · {event.venueLabel}<br />
+          Capture the event, the vibes, and ideally yourself. Or skip the photos.
         </p>
       </header>
 
@@ -213,7 +215,7 @@ export function CameraGuide({
       </section>
 
       <button className="btn btn-primary btn-block" onClick={onContinue}>
-        {allComplete ? 'Continue to post composer →' : 'Continue (skip photos)'}
+        {allComplete ? <>Continue to post composer <ArrowRight size={18} className="action-icon" aria-hidden="true" /></> : 'Continue (skip photos)'}
       </button>
     </>
   );

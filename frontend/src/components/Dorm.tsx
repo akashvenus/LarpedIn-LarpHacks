@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
+import { ArrowRight } from 'lucide-react';
 import { AVATAR_ITEMS } from '../assets/manifest';
 import { ItemId, SpotId } from '../domain/items';
 import { AccessoryId, HeldPropId } from '../domain/gear';
@@ -162,7 +163,7 @@ export function Dorm({
               journeyStep === 'events' ? 'Find an event' : journeyStep === 'standup' ? 'Post your first Stand-Up' :
               journeyStep === 'camera' ? 'Capture an event photo' : journeyStep === 'social' ? 'Share your post' : 'Create your event post'
             }</strong></span>
-            <span className="journey-arrow" aria-hidden="true">→</span>
+            <ArrowRight className="journey-arrow" size={20} aria-hidden="true" />
           </button>
         )}
         <button

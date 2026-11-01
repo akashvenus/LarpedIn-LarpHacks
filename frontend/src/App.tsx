@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useReducer, useRef, useState, type ReactNode } from 'react';
+import { ArrowLeft } from 'lucide-react';
 import {
   compose,
   fetchAiPreset,
@@ -512,7 +513,7 @@ export default function App() {
         <div className="page-with-header" style={{ display: screen === 'composer' ? undefined : 'none' }}>
           <header className="topbar">
             <button className="icon-btn" onClick={() => navigate('camera')} aria-label="Back to camera guide">
-              ←
+              <ArrowLeft size={20} className="nav-arrow" aria-hidden="true" />
             </button>
             <span className="topbar-title">Post composer</span>
           </header>
@@ -555,7 +556,7 @@ export default function App() {
         <div className="page-with-header">
           <header className="topbar">
             <button className="icon-btn" onClick={() => navigate('dorm')} aria-label="Back to dorm">
-              ←
+              <ArrowLeft size={20} className="nav-arrow" aria-hidden="true" />
             </button>
             <span className="brand-logo social-wordmark" aria-label="LarpedIn">Larped<span>in</span></span>
             {screen === 'inbox' && <span className="social-section">Inbox</span>}
