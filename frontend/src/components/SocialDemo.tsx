@@ -1,62 +1,52 @@
-import { useEffect, useState } from 'react';
 import { ASSETS } from '../assets/manifest';
-import { PhotoRef, PROMPTS, PromptId } from '../domain/types';
+import { CommunityPost, PhotoRef, PROMPTS, PromptId } from '../domain/types';
 
 export interface SocialDemoProps {
   profile: { id: string; name: string; headline: string };
-  recruiter: { id: string; name: string; headline: string };
   postText: string;
   /** Captured photos in fixed prompt order (room → selfie → banner → handshake). */
   photos: PhotoRef[];
-  outreachMessage: string;
-  outreachSent: boolean;
-  /** Draft phase (unpublished): show the post preview + Post button.
-   *  Live phase (published): feed post + automatic inbox message. */
+  /** Show the draft or the published post. */
   published: boolean;
+  profilePhoto: PromptId | null;
+  onSelectPhoto: (promptId: PromptId) => void;
+  communityPosts: CommunityPost[];
+  feedError: string | null;
   onPublish: (text: string) => void;
   onEdit?: () => void;
-}
-
-function initials(name: string): string {
-  return name
-    .split(/\s+/)
-    .map((w) => w[0])
-    .slice(0, 2)
-    .join('')
-    .toUpperCase();
+  onReplace?: () => void;
+  onDelete: () => void;
+  onCancelReplace: () => void;
+  busy: boolean;
+  error: string | null;
+  replacing: boolean;
 }
 
 function photoAlt(promptId: PromptId): string {
   return PROMPTS.find((p) => p.id === promptId)?.label ?? 'Event';
 }
 
-/**
- * Simulated social app (F3). Visibly labeled demo simulation with a
- * seeded profile. Before publishing it doubles as the publish surface:
- * the composed post + all captured photos appear as a draft with a
- * single Post button (no editable field — mockup demo). After
- * publishing, the feed shows the post and the prewritten recruiter
- * message arrives automatically when outreachSent flips true.
- */
 export function SocialDemo({
   profile,
-  recruiter,
   postText,
   photos,
-  outreachMessage,
-  outreachSent,
   published,
+  profilePhoto,
+  onSelectPhoto,
+  communityPosts,
+  feedError,
   onPublish,
   onEdit,
+  onReplace,
+  onDelete,
+  onCancelReplace,
+  busy,
+  error,
+  replacing,
 }: SocialDemoProps) {
-  const [messageShown, setMessageShown] = useState(false);
-
-  // One-shot entrance animation when the automatic send lands.
-  useEffect(() => {
-    if (!published || !outreachSent) return;
-    const t = window.setTimeout(() => setMessageShown(true), 700);
-    return () => window.clearTimeout(t);
-  }, [published, outreachSent]);
+  const avatar = photos.find((photo) => photo.promptId === profilePhoto)?.url
+    ?? photos.find((photo) => photo.promptId === 'selfie')?.url
+    ?? photos[0]?.url ?? ASSETS.avatar;
 
   const photoGrid =
     photos.length > 0 ? (
@@ -67,27 +57,37 @@ export function SocialDemo({
       </div>
     ) : null;
 
+  const communityFeed = (
+    <section className="card">
+      <h3>Community feed</h3>
+      {feedError && <p className="form-error" role="alert">{feedError}</p>}
+      {!feedError && communityPosts.length === 0 && <p className="muted">No community posts yet.</p>}
+      {communityPosts.map((post) => (
+        <article className="feed-post community-post" key={post.id}>
+          <div className="feed-head">
+            <img className="feed-avatar" src={ASSETS.avatar} alt="" />
+            <div>
+              <strong>Community member</strong>
+              <div className="muted feed-time">{new Date(post.createdAt).toLocaleString()}</div>
+            </div>
+          </div>
+          <p className="muted feed-time">Event · {post.eventId}</p>
+          <p className="feed-text">{post.text}</p>
+        </article>
+      ))}
+    </section>
+  );
+
   return (
     <div className="social">
-      <div className="social-label">
-        <span className="pill pill-sim">Demo simulation</span>
-        <span className="muted">In-app only — no real account, no real messages.</span>
-      </div>
-
-      <section className="card profile-card">
-        <img className="profile-avatar" src={ASSETS.avatar} alt="" />
-        <div>
-          <h2 style={{ margin: 0 }}>{profile.name}</h2>
-          <p className="muted" style={{ margin: '4px 0 0' }}>{profile.headline}</p>
-        </div>
-      </section>
-
+      {error && <p className="post-action-error" role="alert">{error}</p>}
       {!published ? (
+        <>
         <section className="card">
           <h3>Your post · draft</h3>
           <article className="feed-post">
             <div className="feed-head">
-              <img className="feed-avatar" src={ASSETS.avatar} alt="" />
+              <img className="feed-avatar" src={avatar} alt="" />
               <div>
                 <strong>{profile.name}</strong>
                 <div className="muted feed-time">{profile.headline} · draft</div>
@@ -100,34 +100,49 @@ export function SocialDemo({
             )}
             {photoGrid}
           </article>
+          {photos.length > 0 && (
+            <fieldset className="profile-photo-picker">
+              <legend>Choose a profile photo</legend>
+              <div className="profile-photo-options">
+                {photos.map((photo) => <button key={photo.promptId} type="button" className="profile-photo-option"
+                  aria-label={`Use ${photoAlt(photo.promptId)} as profile photo`} aria-pressed={avatar === photo.url}
+                  onClick={() => onSelectPhoto(photo.promptId)}><img src={photo.url} alt="" /></button>)}
+              </div>
+            </fieldset>
+          )}
           {onEdit && (
             <button type="button" className="btn btn-block social-edit" onClick={onEdit}>
-              Edit post
+              {postText ? 'Edit post' : 'Create post'}
             </button>
           )}
           <button
             className="btn btn-primary btn-block"
             style={{ marginTop: 12 }}
-            disabled={!postText.trim()}
+            disabled={!postText.trim() || busy}
             onClick={() => onPublish(postText)}
           >
-            📤 Post to feed · +40 XP
+            {busy ? 'Saving…' : replacing ? 'Save replacement' : '📤 Post to feed · +40 XP'}
           </button>
+          {replacing && <button type="button" className="btn btn-block social-edit" onClick={onCancelReplace} disabled={busy}>Cancel replacement</button>}
         </section>
+        {communityFeed}
+        </>
       ) : (
         <>
           <section className="card">
             <h3>Feed</h3>
             <article className="feed-post">
               <div className="feed-head">
-                <img className="feed-avatar" src={ASSETS.avatar} alt="" />
+                <img className="feed-avatar" src={avatar} alt="" />
                 <div>
                   <strong>{profile.name}</strong>
                   <div className="muted feed-time">{profile.headline} · Just now</div>
                 </div>
+                <button type="button" className="post-delete" aria-label="Delete post" title="Delete post" onClick={onDelete} disabled={busy}>🗑️</button>
               </div>
               <p className="feed-text">{postText}</p>
               {photoGrid}
+              {onReplace && <button type="button" className="btn social-edit" onClick={onReplace} disabled={busy}>Edit post</button>}
               <div className="feed-fake-actions" aria-hidden>
                 <span>👍 12</span>
                 <span>💬 3</span>
@@ -135,27 +150,9 @@ export function SocialDemo({
               </div>
             </article>
           </section>
+          {communityFeed}
 
-          <section className="card">
-            <h3>Inbox {outreachSent && <span className="inbox-count">1</span>}</h3>
-            {messageShown ? (
-              <article className="inbox-msg">
-                <div className="inbox-head">
-                  <div className="inbox-avatar" aria-hidden>{initials(recruiter.name)}</div>
-                  <div>
-                    <strong>{recruiter.name}</strong>
-                    <div className="muted feed-time">{recruiter.headline}</div>
-                  </div>
-                </div>
-                <div className="inbox-bubble">{outreachMessage}</div>
-                <div className="inbox-status">✅ Delivered automatically · just now</div>
-              </article>
-            ) : (
-              <p className="muted inbox-waiting">
-                {outreachSent ? 'Sending message…' : 'Waiting for the demo to send your message…'}
-              </p>
-            )}
-          </section>
+
         </>
       )}
     </div>

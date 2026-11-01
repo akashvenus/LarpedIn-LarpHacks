@@ -1,17 +1,17 @@
 /* LarpedIn — base styles. Phone-first (~390px, verified at 360px). */
 
 :root {
-  --bg: #14122b;
-  --surface: #1e1b3a;
-  --surface-2: #2a2650;
-  --line: #3a3568;
-  --text: #f5f3ff;
-  --muted: #a49fcd;
-  --coral: #ff6b6b;
-  --teal: #4ecdc4;
+  --bg: #f4f2ee;
+  --surface: #ffffff;
+  --surface-2: #eef3f8;
+  --line: #d8d8d8;
+  --text: #191919;
+  --muted: #5e5e5e;
+  --coral: #b42318;
+  --teal: #0a66c2;
   --cream: #fff4e0;
-  --gold: #ffd166;
-  --ok: #7be495;
+  --gold: #80520b;
+  --ok: #057642;
   --radius: 16px;
   --dock-h: 72px;
 }
@@ -27,9 +27,9 @@ body {
 }
 
 body {
-  background: radial-gradient(1200px 600px at 50% -10%, #241f4d 0%, var(--bg) 55%) fixed;
+  background: var(--bg);
   color: var(--text);
-  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  font-family: Arial, Helvetica, sans-serif;
   -webkit-font-smoothing: antialiased;
   -webkit-tap-highlight-color: transparent;
 }
@@ -46,6 +46,21 @@ body {
   display: flex;
   flex-direction: column;
   gap: 16px;
+}
+
+.persistence-error {
+  padding: 10px 12px;
+  border: 1px solid var(--coral);
+  border-radius: 10px;
+  background: var(--surface);
+  color: #8a1c1c;
+  font-size: 13px;
+}
+
+.persistence-status {
+  color: var(--muted);
+  font-size: 12px;
+  text-align: right;
 }
 
 .page-with-header {
@@ -149,9 +164,9 @@ h2 {
 }
 
 .btn-primary {
-  background: linear-gradient(135deg, var(--coral), #ff8e5e);
-  border: none;
-  color: #2b1220;
+  background: #0a66c2;
+  border-color: #0a66c2;
+  color: #ffffff;
 }
 
 .btn-ghost {
@@ -173,7 +188,7 @@ h2 {
   width: 100%;
   max-width: 430px;
   padding: 10px 12px calc(10px + env(safe-area-inset-bottom, 0px));
-  background: rgba(24, 21, 48, 0.92);
+  background: rgba(255, 255, 255, 0.96);
   backdrop-filter: blur(14px);
   border-top: 1px solid var(--line);
   display: grid;
@@ -204,7 +219,7 @@ h2 {
 }
 
 .dock-item.active {
-  color: var(--text);
+  color: #0a66c2;
   background: var(--surface-2);
 }
 
@@ -269,9 +284,13 @@ h2 {
   display: flex;
   justify-content: space-between;
   align-items: baseline;
+  gap: 12px;
   font-size: 13px;
   color: var(--muted);
 }
+
+.xp-row span { line-height: 1.35; }
+.xp-row strong { white-space: nowrap; }
 
 .xp-row strong {
   color: var(--text);
@@ -289,7 +308,7 @@ h2 {
 .xp-fill {
   height: 100%;
   border-radius: 999px;
-  background: linear-gradient(90deg, var(--teal), var(--coral));
+  background: var(--teal);
   transition: width 0.6s cubic-bezier(0.22, 1, 0.36, 1);
 }
 
@@ -390,11 +409,13 @@ h2 {
 
 .standup-grid {
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: minmax(0, 1fr);
   gap: 10px;
 }
 
 .standup-grid textarea {
+  width: 100%;
+  min-width: 0;
   min-height: 74px;
   resize: vertical;
   background: var(--bg);
@@ -435,8 +456,8 @@ h2 {
 }
 
 .event-card.featured {
-  border-color: rgba(255, 209, 102, 0.5);
-  background: linear-gradient(160deg, rgba(255, 209, 102, 0.08), var(--surface) 45%);
+  border-color: #b9d2e8;
+  background: var(--surface);
 }
 
 .event-card.selected {
@@ -924,3 +945,11 @@ h2 {
   letter-spacing: -0.06em;
   line-height: 1.05;
 }
+
+/* Shared navigation and interaction styling across the app. */
+.topbar { padding: 8px 10px; background: var(--surface); border: 1px solid var(--line); border-radius: 10px; }
+.icon-btn { background: transparent; border-color: transparent; color: #454545; }
+.icon-btn:hover { background: var(--surface-2); }
+.btn:focus-visible, .icon-btn:focus-visible, .dock-item:focus-visible { outline: 2px solid #0a66c2; outline-offset: 2px; }
+.btn-primary:hover:not(:disabled) { background: #004182; }
+.pill-featured { color: #80520b; background: #fff4d6; border-color: #e3c991; }

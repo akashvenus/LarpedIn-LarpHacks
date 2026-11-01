@@ -20,16 +20,27 @@ import {
  */
 export function demoReducer(state: DemoState, action: DemoAction): DemoState {
   switch (action.type) {
+    case 'RESTORE_STATE':
+      return { ...initialState, ...action.state };
+
+    case 'SET_CURRENT_SCREEN':
+      if (state.currentScreen === action.screen) return state;
+      return { ...state, currentScreen: action.screen };
+
+    case 'SET_PROFILE':
+      return { ...state, name: action.name.trim(), occupation: action.occupation.trim() };
+
+    case 'SET_PROFILE_PHOTO':
+      if (!state.photos[action.promptId]) return state;
+      return { ...state, profilePhoto: action.promptId };
+
     case 'SELECT_EVENT':
       if (state.eventId === action.eventId) return state;
       return { ...state, eventId: action.eventId };
 
     case 'CAPTURE': {
-      // One capture per prompt; re-snap revokes the old object URL and
-      // overwrites. XP is derived from completedPrompts (a set), so
-      // repeated snaps can never add XP twice.
-      const prevUrl = state.photos[action.promptId];
-      if (prevUrl) URL.revokeObjectURL(prevUrl);
+      // XP is derived from completedPrompts (a set), so repeated snaps
+      // can never add XP twice. Data URLs survive database round-trips.
       const completed = state.completedPrompts.includes(action.promptId)
         ? state.completedPrompts
         : [...state.completedPrompts, action.promptId];
@@ -38,7 +49,7 @@ export function demoReducer(state: DemoState, action: DemoAction): DemoState {
         completedPrompts: completed,
         photos: {
           ...state.photos,
-          [action.promptId]: URL.createObjectURL(action.blob),
+          [action.promptId]: action.dataUrl,
         },
       };
     }
@@ -127,6 +138,23 @@ export function demoReducer(state: DemoState, action: DemoAction): DemoState {
       };
     }
 
+    case 'SET_COMPOSER_INPUT':
+      return {
+        ...state,
+        eventId: action.input.eventId,
+        composerInput: action.input,
+        selections: {
+          hookId: action.input.hookId,
+          learningIds: [...action.input.learningIds],
+          conclusionId: action.input.conclusionId,
+          hashtagIds: [...action.input.hashtagIds],
+        },
+      };
+
+    case 'SET_COMPOSER_DRAFT':
+      if (JSON.stringify(state.composerDraft) === JSON.stringify(action.draft)) return state;
+      return { ...state, composerDraft: action.draft };
+
     case 'SET_POST_TEXT':
       if (state.postText === action.text) return state;
       return { ...state, postText: action.text };
@@ -134,6 +162,9 @@ export function demoReducer(state: DemoState, action: DemoAction): DemoState {
     case 'PUBLISH_POST':
       if (state.postPublished || !state.postText.trim()) return state;
       return { ...state, postPublished: true };
+
+    case 'DELETE_POST':
+      return { ...state, postText: '', postPublished: false, composerInput: null, composerDraft: initialState.composerDraft, selections: initialState.selections };
 
     case 'SUBMIT_STAND_UP':
       if (state.standUpSubmitted) return state;
@@ -143,10 +174,14 @@ export function demoReducer(state: DemoState, action: DemoAction): DemoState {
         standUpBullets: { bullet1: action.bullet1, bullet2: action.bullet2 },
       };
 
+    case 'SET_STAND_UP_DRAFT':
+      if (state.standUpDraft === action.draft) return state;
+      return { ...state, standUpDraft: action.draft };
+
     case 'GIFT_ANIMATION_DONE':
       // One callback: mark the gift open and send the simulated message.
       if (state.giftOpened) return state;
-      return { ...state, giftOpened: true, outreachSent: true };
+      return { ...state, giftOpened: true, outreachSent: true, outreachPostText: state.postText };
 
     case 'PLACE_ITEM': {
       const item = findItem(action.itemId);

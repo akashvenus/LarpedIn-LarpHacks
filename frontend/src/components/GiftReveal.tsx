@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { ASSETS } from '../assets/manifest';
 
 export interface GiftRevealProps {
@@ -13,13 +13,11 @@ export interface GiftRevealProps {
  * a 6.5s fallback timer guarantees the demo never strands, even if the
  * file or the signal is missing.
  *
- * After the signal: a sealed "Free recruiter message post" card appears
- * and opens (title kept: "Free recruiter message"), then auto-advance.
+ * After the signal, the prize card opens and the user claims it to continue.
  */
 export function GiftReveal({ onComplete }: GiftRevealProps) {
   const [done, setDone] = useState(false);
   const [postOpen, setPostOpen] = useState(false);
-  const firedRef = useRef(false);
 
   // Listen for the animation's completion signal + safety fallback.
   useEffect(() => {
@@ -41,17 +39,8 @@ export function GiftReveal({ onComplete }: GiftRevealProps) {
   useEffect(() => {
     if (!done) return;
     const openTimer = window.setTimeout(() => setPostOpen(true), 700);
-    const doneTimer = window.setTimeout(() => {
-      if (!firedRef.current) {
-        firedRef.current = true;
-        onComplete();
-      }
-    }, 2500);
-    return () => {
-      window.clearTimeout(openTimer);
-      window.clearTimeout(doneTimer);
-    };
-  }, [done, onComplete]);
+    return () => window.clearTimeout(openTimer);
+  }, [done]);
 
   return (
     <div className="gift-screen">
@@ -87,14 +76,14 @@ export function GiftReveal({ onComplete }: GiftRevealProps) {
             </div>
             <h2>Free recruiter message</h2>
             <p className="muted">
-              One profile-photo post plus a prewritten outreach message, automatically sent to a
-              fictional recruiter inside the demo simulation.
+              Claim this gift to send your post and a prewritten message to a fictional recruiter
+              inside the demo simulation.
             </p>
           </article>
         </div>
       )}
 
-      <p className={`gift-advance${postOpen ? ' show' : ''}`}>Opening your simulated inbox…</p>
+      {postOpen && <button type="button" className="btn btn-primary" onClick={onComplete}>Claim gift</button>}
     </div>
   );
 }

@@ -1,13 +1,13 @@
 from pathlib import Path
-
-from fastapi import FastAPI, HTTPException
+from ipaddress import ip_address
+from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 
 from .compose import compose_personal_post, compose_post
 from .content import CONCLUSIONS, DEMO, EVENTS, HASHTAGS, HOOKS, LEARNINGS
-from .db import DatabaseUnavailable, check_db, list_posts, save_post
+from .db import DatabaseUnavailable, check_db, delete_user_post, list_posts, load_user_state, save_user_state, save_post
 from .gemini import generate_preset
 from .models import (
     AiPresetRequest,
@@ -15,6 +15,8 @@ from .models import (
     ComposeRequest,
     ComposeResponse,
     DbHealthResponse,
+    DemoStateResponse,
+    DemoStateWrite,
     PostListResponse,
     PostResponse,
 )
@@ -34,6 +36,15 @@ def pick(table, item_id, field):
     if item_id not in table:
         raise HTTPException(status_code=422, detail=f"Unknown {field}: {item_id}")
     return table[item_id]
+
+
+def get_client_ip(request):
+    forwarded_for = request.headers.get("x-forwarded-for")
+    candidate = forwarded_for.split(",")[0].strip() if forwarded_for else request.client.host
+    try:
+        return str(ip_address(candidate))
+    except ValueError:
+        raise HTTPException(status_code=400, detail="Could not identify client IP")
 
 
 @app.get("/api/health")
@@ -83,15 +94,16 @@ def ai_preset(request: AiPresetRequest):
 
 
 @app.post("/api/posts", response_model=PostResponse, status_code=201)
-def create_post(request: ComposeRequest):
-    text = compose_from_request(request)
+def create_post(payload: ComposeRequest, http_request: Request):
+    text = compose_from_request(payload)
     try:
         return save_post(
-            request.eventId,
-            request.hookId,
-            request.learningIds,
-            request.conclusionId,
-            request.hashtagIds,
+            get_client_ip(http_request),
+            payload.eventId,
+            payload.hookId,
+            payload.learningIds,
+            payload.conclusionId,
+            payload.hashtagIds,
             text,
         )
     except DatabaseUnavailable:
@@ -99,11 +111,19 @@ def create_post(request: ComposeRequest):
 
 
 @app.get("/api/posts", response_model=PostListResponse)
-def get_posts(limit: int = 20):
-    if not 1 <= limit <= 50:
+def get_posts(limit: int | None = None):
+    if limit is not None and not 1 <= limit <= 50:
         raise HTTPException(status_code=422, detail="limit must be between 1 and 50")
     try:
         return {"posts": list_posts(limit)}
+    except DatabaseUnavailable:
+        raise HTTPException(status_code=503, detail="Database unavailable")
+
+
+@app.delete("/api/posts/me", status_code=204)
+def remove_user_post(request: Request):
+    try:
+        delete_user_post(get_client_ip(request))
     except DatabaseUnavailable:
         raise HTTPException(status_code=503, detail="Database unavailable")
 
@@ -115,6 +135,24 @@ def db_health():
     except DatabaseUnavailable:
         raise HTTPException(status_code=503, detail="Database unavailable")
     return {"ok": True}
+
+
+@app.get("/api/state", response_model=DemoStateResponse)
+def get_demo_state(request: Request):
+    try:
+        return {"state": load_user_state(get_client_ip(request))}
+    except DatabaseUnavailable:
+        raise HTTPException(status_code=503, detail="Database unavailable")
+
+
+@app.put("/api/state", response_model=DemoStateResponse)
+def put_demo_state(payload: DemoStateWrite, request: Request):
+    try:
+        state = payload.state.model_dump(mode="json")
+        save_user_state(get_client_ip(request), state)
+        return {"state": state}
+    except DatabaseUnavailable:
+        raise HTTPException(status_code=503, detail="Database unavailable")
 
 
 if (DIST / "assets").is_dir():

@@ -1,5 +1,5 @@
 /// <reference types="vite/client" />
-import { AiPreset, ComposerInput, DemoData } from './domain/types';
+import { AiPreset, CommunityPost, ComposerInput, DemoData, DemoState } from './domain/types';
 import { MOCK_DEMO } from './demo/mockDemo';
 
 /**
@@ -65,7 +65,7 @@ export async function fetchAiPreset(eventId: string): Promise<AiPreset> {
   return body as AiPreset;
 }
 
-export async function savePost(input: ComposerInput): Promise<void> {
+export async function savePost(input: ComposerInput): Promise<CommunityPost> {
   const res = await fetch(`${apiBase}/api/posts`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -74,6 +74,47 @@ export async function savePost(input: ComposerInput): Promise<void> {
   if (!res.ok) {
     const body = (await res.json().catch(() => null)) as { detail?: unknown } | null;
     throw new ApiError(body?.detail ? String(body.detail) : `Save failed: ${res.status}`);
+  }
+  return (await res.json()) as CommunityPost;
+}
+
+export async function fetchCommunityPosts(): Promise<CommunityPost[]> {
+  const res = await fetch(`${apiBase}/api/posts`, { headers: { Accept: 'application/json' } });
+  const body = (await res.json().catch(() => null)) as { posts?: CommunityPost[]; detail?: unknown } | null;
+  if (!res.ok) {
+    throw new ApiError(body?.detail ? String(body.detail) : `Load feed failed: ${res.status}`);
+  }
+  return body?.posts ?? [];
+}
+
+export async function deleteUserPost(): Promise<void> {
+  const res = await fetch(`${apiBase}/api/posts/me`, { method: 'DELETE' });
+  if (!res.ok) {
+    const body = (await res.json().catch(() => null)) as { detail?: string } | null;
+    throw new ApiError(body?.detail || `Delete post failed: ${res.status}`);
+  }
+}
+
+export async function fetchDemoState(): Promise<DemoState | null> {
+  const res = await fetch(`${apiBase}/api/state`, {
+    headers: { Accept: 'application/json' },
+  });
+  const body = (await res.json().catch(() => null)) as { state?: DemoState | null; detail?: unknown } | null;
+  if (!res.ok) {
+    throw new ApiError(body?.detail ? String(body.detail) : `Load progress failed: ${res.status}`);
+  }
+  return body?.state ?? null;
+}
+
+export async function saveDemoState(state: DemoState): Promise<void> {
+  const res = await fetch(`${apiBase}/api/state`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ state }),
+  });
+  if (!res.ok) {
+    const body = (await res.json().catch(() => null)) as { detail?: unknown } | null;
+    throw new ApiError(body?.detail ? String(body.detail) : `Save progress failed: ${res.status}`);
   }
 }
 

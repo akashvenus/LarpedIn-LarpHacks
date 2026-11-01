@@ -117,3 +117,7 @@
   font-size: 20px;
   font-weight: 700;
 }
+
+/* The camera overlay sits on the live image and needs its own contrast. */
+.cam-overlay { color: #ffffff; }
+.cam-overlay .muted { color: #e4e7ed; }

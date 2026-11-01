@@ -145,7 +145,7 @@ Validation matches `POST /api/compose` and returns `422`. If `DATABASE_URL` is n
 
 ## `GET /api/posts`
 
-Optional query: `limit` (default `20`, range `1` to `50`).
+Returns the shared community feed across all users. Optional query: `limit` (range `1` to `50`); when omitted, all posts are returned.
 
 Response `200`:
 
@@ -153,7 +153,13 @@ Response `200`:
 {"posts": [{"id": 1, "createdAt": "2026-11-01T18:30:00+00:00", "eventId": "larphacks", "hookId": "hook-1", "learningIds": ["learn-1", "learn-2", "learn-3"], "conclusionId": "end-1", "hashtagIds": ["ai"], "text": "..."}]}
 ```
 
-Newest posts first. Returns `422` for an out-of-range limit and `503` when the database is unavailable.
+Newest posts first. Returns `422` for an out-of-range limit and `503` when the database is unavailable. The author's IP is stored internally but is never included in the response.
+
+## `GET /api/state` and `PUT /api/state`
+
+The user's saved demo progress is keyed by the client's IP address. The server uses the first address in `X-Forwarded-For` (provided by Render's proxy) and falls back to the direct client address. `GET` returns `{"state": null}` when there is no saved progress; `PUT` accepts `{"state": <DemoState>}` and returns the saved state. Clients do not send or persist an identity key themselves.
+
+IP-based identity means devices sharing a public IP share progress, and progress may map to a different record if a user's public IP changes. The `users.ip_address` column is the user table's primary key.
 
 ## `GET /api/db/health`
 
@@ -173,3 +179,7 @@ Returns `503` when `DATABASE_URL` is not configured or the database is unreachab
 ## Static frontend
 
 FastAPI serves `frontend/dist` at `/` with an HTML fallback for SPA navigation. Unknown `/api/*` paths return `404`, never the HTML fallback.
+
+## `DELETE /api/posts/me`
+
+Deletes the current IP's post from the shared feed. Returns `204`, or `503` when the database is unavailable. Posts are unique per IP; publishing again replaces that IP's existing feed post.

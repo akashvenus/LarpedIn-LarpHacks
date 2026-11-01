@@ -259,7 +259,7 @@ def test_ai_preset_rejects_invalid_model_output():
 
 def test_posts_endpoints_require_database(monkeypatch):
     monkeypatch.delenv("DATABASE_URL", raising=False)
-    assert client.post("/api/posts", json=good_payload()).status_code == 503
+    assert client.post("/api/posts", json=good_payload(), headers={"x-forwarded-for": "192.0.2.10"}).status_code == 503
     assert client.get("/api/posts").status_code == 503
     assert client.get("/api/db/health").status_code == 503
 
@@ -275,6 +275,36 @@ def test_posts_limit_validation(monkeypatch):
     monkeypatch.delenv("DATABASE_URL", raising=False)
     assert client.get("/api/posts?limit=0").status_code == 422
     assert client.get("/api/posts?limit=51").status_code == 422
+
+
+def test_public_feed_returns_all_posts_by_default(monkeypatch):
+    from app import main
+
+    posts = [
+        {"id": i, "createdAt": "2026-11-01T12:00:00Z", "eventId": "larphacks",
+         "hookId": "hook-1", "learningIds": ["learn-1", "learn-2", "learn-3"],
+         "conclusionId": "end-1", "hashtagIds": ["ai"], "text": f"Post {i}"}
+        for i in (3, 2, 1)
+    ]
+    monkeypatch.setattr(main, "list_posts", lambda limit=None: posts if limit is None else posts[:limit])
+
+    response = client.get("/api/posts")
+    assert response.status_code == 200
+    assert [post["id"] for post in response.json()["posts"]] == [3, 2, 1]
+
+
+def test_saved_progress_uses_forwarded_client_ip(monkeypatch):
+    from app import main
+
+    captured = {}
+    def fake_load(address):
+        captured["ip"] = address
+        return None
+    monkeypatch.setattr(main, "load_user_state", fake_load)
+
+    response = client.get("/api/state", headers={"x-forwarded-for": "2001:db8::1, 10.0.0.2"})
+    assert response.status_code == 200
+    assert captured["ip"] == "2001:db8::1"
 
 
 def test_personal_post_formats_optional_details_and_preserves_legacy():
@@ -298,7 +328,8 @@ def test_personal_save_uses_composed_text(monkeypatch):
     from app import main
 
     captured = {}
-    def fake_save(event, hook, learnings, conclusion, hashtags, text):
+    def fake_save(author_ip, event, hook, learnings, conclusion, hashtags, text):
+        captured["ip"] = author_ip
         captured["text"] = text
         return {"id": 1, "createdAt": datetime.now(timezone.utc), "eventId": event,
                 "hookId": hook, "learningIds": learnings, "conclusionId": conclusion,
@@ -306,8 +337,9 @@ def test_personal_save_uses_composed_text(monkeypatch):
 
     monkeypatch.setattr(main, "save_post", fake_save)
     payload = {**good_payload(), "format": "personal", "moment": "our demo", "person": "the team", "nextStep": "ship it"}
-    response = client.post('/api/posts', json=payload)
+    response = client.post('/api/posts', json=payload, headers={"x-forwarded-for": "192.0.2.10, 10.0.0.1"})
     assert response.status_code == 201
+    assert captured["ip"] == "192.0.2.10"
     assert response.json()['text'] == captured['text'] == compose(payload).json()['text']
 
 
@@ -315,7 +347,7 @@ def test_personal_custom_lines_and_validation(monkeypatch):
     from datetime import datetime, timezone
     from app import main
 
-    def fake_save(event, hook, learnings, conclusion, hashtags, text):
+    def fake_save(author_ip, event, hook, learnings, conclusion, hashtags, text):
         return {"id": 1, "createdAt": datetime.now(timezone.utc), "eventId": event,
                 "hookId": hook, "learningIds": learnings, "conclusionId": conclusion,
                 "hashtagIds": hashtags, "text": text}
@@ -329,7 +361,74 @@ def test_personal_custom_lines_and_validation(monkeypatch):
     text = response.json()["text"]
     assert text.startswith("My opening!\n\n")
     assert "My closing." in text
-    assert client.post("/api/posts", json=payload).json()["text"] == text
+    assert client.post("/api/posts", json=payload, headers={"x-forwarded-for": "192.0.2.10"}).json()["text"] == text
     assert compose({**payload, "customHook": "x" * 281}).status_code == 422
     assert compose({**payload, "customConclusion": "x" * 281}).status_code == 422
     assert compose({**payload, "format": "legacy"}).json()["text"] == compose(good_payload()).json()["text"]
+
+
+def test_user_post_deletion_uses_client_ip(monkeypatch):
+    from app import main
+    captured = {}
+    monkeypatch.setattr(main, "delete_user_post", lambda address: captured.setdefault("ip", address))
+    response = client.delete("/api/posts/me", headers={"x-forwarded-for": "192.0.2.11, 10.0.0.3"})
+    assert response.status_code == 204
+    assert captured["ip"] == "192.0.2.11"
+
+
+def test_user_post_database_failures_are_reported(monkeypatch):
+    from app import main
+    from app.db import DatabaseUnavailable
+    def fail(*args):
+        raise DatabaseUnavailable()
+    monkeypatch.setattr(main, "delete_user_post", fail)
+    assert client.delete("/api/posts/me", headers={"x-forwarded-for": "192.0.2.12"}).status_code == 503
+
+
+def test_ai_preset_calls_gemini_when_configured(monkeypatch):
+    from types import SimpleNamespace
+    from app import gemini
+    selected = {
+        "hookId": COMPOSER["hooks"][0]["id"],
+        "learningIds": [item["id"] for item in COMPOSER["learnings"][:3]],
+        "conclusionId": COMPOSER["conclusions"][0]["id"],
+        "hashtagIds": [COMPOSER["hashtags"][0]["id"]],
+    }
+    calls = []
+    def generate_content(**kwargs):
+        calls.append(kwargs)
+        return SimpleNamespace(text=json.dumps(selected))
+    monkeypatch.setenv("GEMINI_API_KEY", "test-key")
+    monkeypatch.setattr(gemini.genai, "Client", lambda **kwargs: SimpleNamespace(models=SimpleNamespace(generate_content=generate_content)))
+    response = client.post("/api/ai/preset", json={"eventId": DEMO["events"][0]["id"]})
+    assert response.status_code == 200
+    assert response.json() == {"source": "gemini", **selected}
+    assert len(calls) == 1 and calls[0]["model"] == "gemini-3.5-flash-lite"
+
+
+def test_ai_preset_silently_falls_back_when_gemini_fails(monkeypatch):
+    from app import gemini
+    def fail(**kwargs):
+        raise RuntimeError("unavailable")
+    monkeypatch.setenv("GEMINI_API_KEY", "test-key")
+    monkeypatch.setattr(gemini.genai, "Client", fail)
+    response = client.post("/api/ai/preset", json={"eventId": DEMO["events"][0]["id"]})
+    assert response.status_code == 200
+    assert response.json()["source"] == "fallback"
+
+
+def test_saved_progress_profile_fields_are_backward_compatible():
+    from app.models import DemoStatePayload
+    payload = {
+        "currentScreen": "dorm", "eventId": None, "completedPrompts": [],
+        "photos": {"room": None, "selfie": None, "banner": None, "handshake": None},
+        "selections": {"hookId": None, "learningIds": [], "conclusionId": None, "hashtagIds": []},
+        "composerInput": None, "composerDraft": {"answers": {}, "hashtagIds": [], "active": "hook", "customOpen": False, "customDraft": ""},
+        "postText": "", "postPublished": False, "avatarItem": "base", "roomItems": [],
+        "standUpDraft": "", "standUpSubmitted": False, "standUpBullets": None,
+        "giftOpened": False, "outreachSent": False, "placements": {},
+    }
+    legacy = DemoStatePayload.model_validate(payload)
+    assert legacy.name == "" and legacy.occupation == "" and legacy.profilePhoto is None
+    updated = DemoStatePayload.model_validate({**payload, "name": "Sam", "occupation": "Designer", "profilePhoto": "selfie", "currentScreen": "inbox", "outreachPostText": "My post"})
+    assert updated.name == "Sam" and updated.profilePhoto == "selfie" and updated.outreachPostText == "My post"

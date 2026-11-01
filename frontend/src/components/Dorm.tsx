@@ -8,7 +8,9 @@ export interface DormProps {
   xp: number;
   standUpSubmitted: boolean;
   standUpBullets: { bullet1: string; bullet2: string } | null;
+  standUpDraft: string;
   onSubmitStandUp: (bullet1: string, bullet2: string) => void;
+  onStandUpDraftChange: (draft: string) => void;
   onFindEvent: () => void;
   avatarItem: string;
   roomItems: string[];
@@ -29,7 +31,9 @@ export function Dorm({
   xp,
   standUpSubmitted,
   standUpBullets,
+  standUpDraft,
   onSubmitStandUp,
+  onStandUpDraftChange,
   onFindEvent,
   avatarItem,
   roomItems,
@@ -43,7 +47,7 @@ export function Dorm({
   const [inventoryOpen, setInventoryOpen] = useState(false);
   const [carryingId, setCarryingId] = useState<ItemId | null>(null);
   const [isStandUpOpen, setIsStandUpOpen] = useState(false);
-  const [standUp, setStandUp] = useState('');
+  const [standUp, setStandUp] = useState(standUpDraft);
   const bullets = standUp.split('\n').map((line) => line.replace(/^\s*[•*-]\s*/, '').trim()).filter(Boolean);
 
   const avatarEntry = AVATAR_ITEMS.find((item) => item.id === avatarItem);
@@ -54,7 +58,7 @@ export function Dorm({
         <h1 className="brand-logo" aria-label="LarpedIn">Larped<span>in</span></h1>
         <div className="card xp-wrap">
           <div className="xp-row">
-            <span>Internship progress</span>
+            <span>Progress toward a tech-bro VC startup internship (with equity)</span>
             <strong>{xp}/100 XP</strong>
           </div>
           <div
@@ -63,7 +67,7 @@ export function Dorm({
             aria-valuenow={xp}
             aria-valuemin={0}
             aria-valuemax={100}
-            aria-label="Internship progress"
+            aria-label="Progress toward a tech-bro VC startup internship with equity"
           >
             <div className="xp-fill" style={{ width: `${xp}%` }} />
           </div>
@@ -129,7 +133,10 @@ export function Dorm({
               <textarea
                 placeholder={'• Win (did)\n• Next (todo)'}
                 value={standUp}
-                onChange={(e) => setStandUp(e.target.value)}
+                onChange={(e) => {
+                  setStandUp(e.target.value);
+                  onStandUpDraftChange(e.target.value);
+                }}
                 aria-label="Stand-up: win and next steps"
               />
             </div>

@@ -1,17 +1,33 @@
-import { useEffect, useReducer, useRef, useState } from 'react';
-import { compose, fetchAiPreset, fetchDemo, localCompose, savePost } from './api';
+import { useCallback, useEffect, useReducer, useRef, useState } from 'react';
+import {
+  compose,
+  fetchAiPreset,
+  fetchCommunityPosts,
+  fetchDemo,
+  fetchDemoState,
+  localCompose,
+  saveDemoState,
+  savePost,
+  deleteUserPost,
+} from './api';
 import { CameraGuide } from './components/CameraGuide';
 import { Dorm } from './components/Dorm';
 import { Events } from './components/Events';
 import { GiftReveal } from './components/GiftReveal';
 import { PostComposer } from './components/PostComposer';
+import { Onboarding } from './components/Onboarding';
+import { Inbox } from './components/Inbox';
 import { SocialDemo } from './components/SocialDemo';
 import { Trophies } from './components/Trophies';
 import { demoReducer, initialState } from './domain/reducer';
 import { badgeUnlocked, derivedXp, micUnlocked, photoList, unlockedItemIds } from './domain/selectors';
-import { ComposerInput, DemoData, PromptId } from './domain/types';
+import { CommunityPost, ComposerInput, DemoData, DemoState, PromptId } from './domain/types';
+import { MOCK_DEMO } from './demo/mockDemo';
+import { loadLocalDemo, saveLocalDemo } from './demo/localDemo';
 
-type Screen = 'dorm' | 'events' | 'camera' | 'trophies' | 'composer' | 'gift' | 'social';
+const isLocalDemo = /^\/demo\/?$/.test(window.location.pathname);
+
+type Screen = DemoState['currentScreen'];
 
 const DOCK: { id: Screen; label: string; icon: string }[] = [
   { id: 'dorm', label: 'Dorm', icon: '🏠' },
@@ -26,11 +42,37 @@ export default function App() {
   const [screen, setScreen] = useState<Screen>('dorm');
   const [demo, setDemo] = useState<DemoData | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
+  const [stateLoaded, setStateLoaded] = useState(false);
+  const [stateError, setStateError] = useState<string | null>(null);
+  const [saveError, setSaveError] = useState<string | null>(null);
+  const [feedError, setFeedError] = useState<string | null>(null);
+  const [communityPosts, setCommunityPosts] = useState<CommunityPost[]>([]);
+  const [saving, setSaving] = useState(false);
+  const [loadAttempt, setLoadAttempt] = useState(0);
+  const saveQueue = useRef<Promise<void>>(Promise.resolve());
   const lastComposerInput = useRef<ComposerInput | null>(null);
-  const publishedRef = useRef(false);
+  const postOperation = useRef(false);
+  const [postBusy, setPostBusy] = useState(false);
+  const [postError, setPostError] = useState<string | null>(null);
+  const [editingPost, setEditingPost] = useState(false);
+  const [sendingRecruiter, setSendingRecruiter] = useState(false);
+  const [composerVersion, setComposerVersion] = useState(0);
+  const [replacement, setReplacement] = useState<{ text: string; input: ComposerInput } | null>(null);
+
+  const handleComposerDraft = useCallback((draft: DemoState['composerDraft']) => {
+    dispatch({ type: 'SET_COMPOSER_DRAFT', draft });
+  }, []);
+  const navigate = useCallback((next: Screen) => {
+    setScreen(next);
+    dispatch({ type: 'SET_CURRENT_SCREEN', screen: next });
+  }, []);
 
   useEffect(() => {
     let alive = true;
+    if (isLocalDemo) {
+      setDemo(MOCK_DEMO);
+      return () => { alive = false; };
+    }
     fetchDemo()
       .then(({ data }) => alive && setDemo(data))
       .catch((err: unknown) => alive && setLoadError(err instanceof Error ? err.message : 'Failed to load demo'));
@@ -38,6 +80,85 @@ export default function App() {
       alive = false;
     };
   }, []);
+
+  useEffect(() => {
+    let alive = true;
+    setStateLoaded(false);
+    setStateError(null);
+    if (isLocalDemo) {
+      try {
+        const saved = loadLocalDemo(window.localStorage);
+        if (saved) {
+          dispatch({ type: 'RESTORE_STATE', state: saved });
+          setScreen(saved.currentScreen);
+        }
+      } catch {
+        // Browsers can block localStorage; the demo still works for this session.
+      }
+      setStateLoaded(true);
+      return () => { alive = false; };
+    }
+    fetchDemoState()
+      .then((saved) => {
+        if (!alive) return;
+        if (saved) {
+          dispatch({ type: 'RESTORE_STATE', state: saved });
+          setScreen(saved.currentScreen);
+        }
+        setStateLoaded(true);
+      })
+      .catch((err: unknown) => {
+        if (alive) setStateError(err instanceof Error ? err.message : 'Could not load saved progress');
+      });
+    return () => { alive = false; };
+  }, [loadAttempt]);
+
+  useEffect(() => {
+    if (!stateLoaded || postOperation.current) return;
+    if (isLocalDemo) {
+      try {
+        saveLocalDemo(window.localStorage, state);
+        setSaveError(null);
+      } catch {
+        setSaveError('Browser storage is unavailable or full; progress will last for this session only.');
+      }
+      return;
+    }
+    const snapshot = state;
+    setSaving(true);
+    const timer = window.setTimeout(() => {
+      if (postOperation.current) return;
+      saveQueue.current = saveQueue.current
+        .then(() => saveDemoState(snapshot))
+        .then(() => {
+          setSaveError(null);
+          setSaving(false);
+        })
+        .catch((err: unknown) => {
+          setSaveError(err instanceof Error ? err.message : 'Could not save progress');
+          setSaving(false);
+        });
+    }, 100);
+    return () => window.clearTimeout(timer);
+  }, [state, stateLoaded]);
+
+  useEffect(() => {
+    if (!sendingRecruiter) return;
+    const timer = window.setTimeout(() => setSendingRecruiter(false), 1200);
+    return () => window.clearTimeout(timer);
+  }, [sendingRecruiter]);
+  useEffect(() => {
+    if (isLocalDemo || screen !== 'social') return;
+    let alive = true;
+    fetchCommunityPosts()
+      .then((posts) => {
+        if (!alive) return;
+        setCommunityPosts(posts);
+        setFeedError(null);
+      })
+      .catch((err: unknown) => alive && setFeedError(err instanceof Error ? err.message : 'Could not load community feed'));
+    return () => { alive = false; };
+  }, [screen]);
 
   const selectedEvent = demo?.events.find((e) => e.id === state.eventId) ?? null;
 
@@ -55,7 +176,22 @@ export default function App() {
     );
   }
 
-  if (!demo) {
+  if (stateError) {
+    return (
+      <div className="splash">
+        <div className="splash-card">
+          <p>⚠️ Could not load saved progress.</p>
+          <p className="muted">{stateError}</p>
+          <button className="btn btn-primary" onClick={() => setLoadAttempt((attempt) => attempt + 1)}>
+            Retry database connection
+          </button>
+          <a className="btn" href="/demo">Open local demo</a>
+        </div>
+      </div>
+    );
+  }
+
+  if (!demo || !stateLoaded) {
     return (
       <div className="splash">
         <div className="splash-card">
@@ -66,18 +202,29 @@ export default function App() {
     );
   }
 
+  if (!state.name?.trim() || !state.occupation?.trim()) {
+    return <Onboarding onComplete={(name, occupation) => dispatch({ type: 'SET_PROFILE', name, occupation })} />;
+  }
+
   const showDock = !['composer', 'gift'].includes(screen);
 
   const handleSelectEvent = (eventId: string) => {
     dispatch({ type: 'SELECT_EVENT', eventId });
-    setScreen('camera');
+    navigate('camera');
   };
 
   const handleCapture = (blob: Blob, promptId: PromptId) => {
-    dispatch({ type: 'CAPTURE', blob, promptId });
+    const reader = new FileReader();
+    reader.onload = () => {
+      if (typeof reader.result === 'string') {
+        dispatch({ type: 'CAPTURE', dataUrl: reader.result, promptId });
+      }
+    };
+    reader.readAsDataURL(blob);
   };
 
   const handleCompose = async (input: ComposerInput) => {
+    if (isLocalDemo) return localCompose(input, demo);
     try {
       return await compose(input);
     } catch (err) {
@@ -91,34 +238,91 @@ export default function App() {
     }
   };
 
-  const handlePublish = (text: string) => {
-    if (publishedRef.current) return;
-    publishedRef.current = true;
-    dispatch({ type: 'SET_POST_TEXT', text });
-    dispatch({ type: 'PUBLISH_POST' });
-    if (state.eventId && !state.giftOpened) setScreen('gift');
-    const input = lastComposerInput.current;
-    if (input) {
-      void savePost(input).catch(() => {});
+  const handlePublish = async (text: string) => {
+    if (postOperation.current || !text.trim()) return;
+    const input = replacement?.input ?? lastComposerInput.current ?? state.composerInput;
+    if (!input) { setPostError('Open the composer to prepare your post.'); return; }
+    postOperation.current = true;
+    setPostBusy(true);
+    setPostError(null);
+    try {
+      await saveQueue.current;
+      const savedText = isLocalDemo ? localCompose(input, demo) : (await savePost(input)).text;
+      if (savedText !== text) throw new Error('The saved post did not match the draft.');
+      if (!isLocalDemo) {
+        fetchCommunityPosts()
+          .then(setCommunityPosts)
+          .catch((err: unknown) => setFeedError(err instanceof Error ? err.message : 'Could not load community feed'));
+      }
+      dispatch({ type: 'SET_COMPOSER_INPUT', input });
+      dispatch({ type: 'SET_POST_TEXT', text });
+      dispatch({ type: 'PUBLISH_POST' });
+      lastComposerInput.current = input;
+      setReplacement(null);
+      setEditingPost(false);
+      if (state.eventId && !state.giftOpened) navigate('gift');
+    } catch (err) {
+      setPostError(err instanceof Error ? err.message : 'Could not save your post.');
+    } finally {
+      postOperation.current = false;
+      setPostBusy(false);
+    }
+  };
+
+  const handleDelete = async () => {
+    if (postOperation.current) return;
+    postOperation.current = true;
+    setPostBusy(true);
+    setPostError(null);
+    try {
+      await saveQueue.current;
+      if (!isLocalDemo) {
+        await deleteUserPost();
+        fetchCommunityPosts()
+          .then(setCommunityPosts)
+          .catch((err: unknown) => setFeedError(err instanceof Error ? err.message : 'Could not load community feed'));
+      }
+      lastComposerInput.current = null;
+      setReplacement(null);
+      setEditingPost(false);
+      setComposerVersion((version) => version + 1);
+      dispatch({ type: 'DELETE_POST' });
+    } catch (err) {
+      setPostError(err instanceof Error ? err.message : 'Could not delete your post.');
+    } finally {
+      postOperation.current = false;
+      setPostBusy(false);
     }
   };
 
   const handleComposed = (text: string, input: ComposerInput) => {
-    lastComposerInput.current = input;
-    dispatch({ type: 'SET_POST_TEXT', text });
-    // The LinkedIn mockup is now the publish surface (draft + Post button).
-    setScreen('social');
+    if (editingPost) {
+      setReplacement({ text, input });
+    } else {
+      lastComposerInput.current = input;
+      dispatch({ type: 'SET_COMPOSER_INPUT', input });
+      dispatch({ type: 'SET_POST_TEXT', text });
+    }
+    navigate('social');
   };
 
   return (
-    <div className="app">
+    <div className={`app${screen === 'social' || screen === 'inbox' ? ' social-page' : ''}`}>
+      {saveError && (
+        <div role="alert" className="persistence-error">
+          {isLocalDemo ? saveError : `Progress could not be saved to the database: ${saveError}`}
+        </div>
+      )}
+      {!saveError && saving && <div className="persistence-status">Saving progress…</div>}
       {screen === 'dorm' && (
         <Dorm
           xp={derivedXp(state)}
           standUpSubmitted={state.standUpSubmitted}
           standUpBullets={state.standUpBullets}
+          standUpDraft={state.standUpDraft}
           onSubmitStandUp={(b1, b2) => dispatch({ type: 'SUBMIT_STAND_UP', bullet1: b1, bullet2: b2 })}
-          onFindEvent={() => setScreen('events')}
+          onStandUpDraftChange={(draft) => dispatch({ type: 'SET_STAND_UP_DRAFT', draft })}
+          onFindEvent={() => navigate('events')}
           avatarItem={state.avatarItem}
           roomItems={state.roomItems}
           onSelectAvatar={(itemId) => dispatch({ type: 'SET_AVATAR_ITEM', itemId })}
@@ -146,7 +350,7 @@ export default function App() {
             photos={state.photos}
             onCapture={handleCapture}
             onCheck={(promptId) => dispatch({ type: 'CHECK_PROMPT', promptId })}
-            onContinue={() => setScreen('composer')}
+            onContinue={() => navigate('composer')}
           />
         ) : (
           <div className="empty-pick">
@@ -155,7 +359,7 @@ export default function App() {
             <p className="muted">
               Pick an event first — its photo guide (and your post) are built around it.
             </p>
-            <button className="btn btn-primary" onClick={() => setScreen('events')}>
+            <button className="btn btn-primary" onClick={() => navigate('events')}>
               Select an event
             </button>
           </div>
@@ -164,19 +368,21 @@ export default function App() {
       {selectedEvent && (
         <div className="page-with-header" style={{ display: screen === 'composer' ? undefined : 'none' }}>
           <header className="topbar">
-            <button className="icon-btn" onClick={() => setScreen('camera')} aria-label="Back to camera guide">
+            <button className="icon-btn" onClick={() => navigate('camera')} aria-label="Back to camera guide">
               ←
             </button>
             <span className="topbar-title">Post composer</span>
           </header>
           <PostComposer
-            key={selectedEvent.id}
+            key={`${selectedEvent.id}-${composerVersion}`}
             event={selectedEvent}
             demo={demo}
             photos={photoList(state)}
+            draft={state.composerDraft}
+            onDraftChange={handleComposerDraft}
             onCompose={handleCompose}
             onComposed={handleComposed}
-            onAiPreset={fetchAiPreset}
+            onAiPreset={isLocalDemo ? async () => { throw new Error('Local demo'); } : fetchAiPreset}
           />
         </div>
       )}
@@ -184,10 +390,10 @@ export default function App() {
       {screen === 'gift' && (
         <GiftReveal
           onComplete={() => {
-            // One-shot: mark the gift open and trigger the automatic
-            // simulated recruiter message (idempotent reducer action).
+            // Claiming the gift sends the message inside the demo.
             dispatch({ type: 'GIFT_ANIMATION_DONE' });
-            setScreen('social');
+            setSendingRecruiter(true);
+            navigate('inbox');
           }}
         />
       )}
@@ -201,25 +407,36 @@ export default function App() {
         />
       )}
 
-      {screen === 'social' && (
+      {(screen === 'social' || screen === 'inbox') && (
         <div className="page-with-header">
           <header className="topbar">
-            <button className="icon-btn" onClick={() => setScreen('dorm')} aria-label="Back to dorm">
+            <button className="icon-btn" onClick={() => navigate('dorm')} aria-label="Back to dorm">
               ←
             </button>
-            <span className="topbar-title">Simulated LinkedIn</span>
+            <span className="brand-logo social-wordmark" aria-label="LarpedIn">Larped<span>in</span></span>
+            {screen === 'inbox' && <span className="social-section">Inbox</span>}
+            <button type="button" className="icon-btn social-mail" aria-label={screen === 'inbox' ? 'Back to feed' : 'Open inbox'} onClick={() => navigate(screen === 'inbox' ? 'social' : 'inbox')}>
+              {screen === 'inbox' ? '▤' : '✉️'}
+            </button>
           </header>
-          <SocialDemo
-            profile={demo.profile}
-            recruiter={demo.recruiter}
-            postText={state.postText}
+          {screen === 'inbox' ? <Inbox recruiter={demo.recruiter} message={demo.outreachMessage} postText={state.outreachPostText || state.postText} sent={state.outreachSent} sending={sendingRecruiter} /> : <SocialDemo
+            profile={{ ...demo.profile, name: state.name, headline: state.occupation }}
+            postText={editingPost ? replacement?.text ?? '' : state.postText}
             photos={photoList(state)}
-            outreachMessage={demo.outreachMessage}
-            outreachSent={state.outreachSent}
-            published={state.postPublished}
-            onPublish={handlePublish}
-            onEdit={state.postText && selectedEvent && !state.postPublished ? () => setScreen('composer') : undefined}
-          />
+            published={state.postPublished && !editingPost}
+            profilePhoto={state.profilePhoto}
+            onSelectPhoto={(promptId) => dispatch({ type: 'SET_PROFILE_PHOTO', promptId })}
+            onPublish={(text) => void handlePublish(text)}
+            onEdit={selectedEvent ? () => navigate('composer') : undefined}
+            onReplace={selectedEvent && state.postPublished ? () => { setEditingPost(true); setReplacement(null); navigate('composer'); } : undefined}
+            onDelete={() => void handleDelete()}
+            busy={postBusy}
+            error={postError}
+            replacing={editingPost}
+            onCancelReplace={() => { setEditingPost(false); setReplacement(null); }}
+            communityPosts={communityPosts}
+            feedError={feedError}
+          />}
         </div>
       )}
 
@@ -229,7 +446,7 @@ export default function App() {
             <button
               key={item.id}
               className={`dock-item${screen === item.id ? ' active' : ''}`}
-              onClick={() => setScreen(item.id)}
+              onClick={() => navigate(item.id)}
             >
               <span className="dock-icon" aria-hidden>{item.icon}</span>
               <span className="dock-label">{item.label}</span>

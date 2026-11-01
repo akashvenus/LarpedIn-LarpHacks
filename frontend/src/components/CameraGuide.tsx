@@ -28,7 +28,7 @@ type CamStatus =
  * - The camera stays live for the whole screen; tracks stop on unmount.
  * - Failures are classified (denied / no camera / insecure / other) with
  *   a clear explanation and retry where it makes sense.
- * - Photos are device-local Blobs; never persisted or uploaded.
+ * - Captures are compressed before the app saves them with browser progress.
  */
 export function CameraGuide({
   event,
@@ -99,15 +99,16 @@ export function CameraGuide({
       const video = videoRef.current;
       if (!video || video.videoWidth === 0) return;
       const canvas = document.createElement('canvas');
-      canvas.width = video.videoWidth;
-      canvas.height = video.videoHeight;
+      const scale = Math.min(1, 1440 / Math.max(video.videoWidth, video.videoHeight));
+      canvas.width = Math.round(video.videoWidth * scale);
+      canvas.height = Math.round(video.videoHeight * scale);
       const ctx = canvas.getContext('2d');
       if (!ctx) return;
       ctx.drawImage(video, 0, 0);
       canvas.toBlob((blob) => {
         if (!blob) return;
         onCapture(blob, promptId);
-      }, 'image/png');
+      }, 'image/jpeg', 0.82);
     },
     [onCapture],
   );
