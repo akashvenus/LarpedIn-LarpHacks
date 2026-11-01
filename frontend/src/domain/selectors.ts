@@ -19,8 +19,8 @@ export type JourneyStep = 'events' | 'standup' | 'camera' | 'composer' | 'social
 /** Pick one actionable step; photos remain available after an event post is published. */
 export function nextJourneyStep(state: DemoState, standUpReady: boolean, standUpToday: boolean): JourneyStep | null {
   if (derivedXp(state) >= 100) return null;
-  if (!state.eventId) return 'events';
   if (!state.standUpSubmitted && standUpReady && !standUpToday) return 'standup';
+  if (!state.eventId) return 'events';
   if (state.completedPrompts.length < PROMPTS.length) return 'camera';
   if (!state.postPublished) return state.postText.trim() ? 'social' : 'composer';
   return null;

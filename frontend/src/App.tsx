@@ -432,6 +432,7 @@ export default function App() {
       dispatch({ type: 'SUBMIT_STAND_UP', bullet1: win, bullet2: nextStep });
       dispatch({ type: 'SET_STAND_UP_DRAFT', draft: '' });
       setToday(localDay());
+      if (!state.standUpSubmitted && !state.eventId) navigate('events');
     } catch (err) {
       if (err instanceof Error && err.message.includes('already posted')) await refreshStandUps();
       setStandUpError(err instanceof Error ? err.message : 'Could not post your Stand-Up. Try again.');
